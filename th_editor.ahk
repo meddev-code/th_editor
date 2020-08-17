@@ -709,7 +709,7 @@ OnMessage(0x111,"WM_FOCUS")
 OnMessage(0x200,"WM_MOUSEMOVE")  ;mousemove
 OnMessage(0x201,"WM_MOUSEMOVE")  ;lbuttondown
 OnMessage(0x204,"WM_MOUSEMOVE")  ;rbuttondown
-;OnMessage(0x4E, "WM_NOTIFY") juz niepotrzebne
+;;;OnMessage(0x4E, "WM_NOTIFY") juz niepotrzebne
 OnMessage(0x03, "WM_MOVE")
 OnMessage(0x06, "WM_ACTIVATE")
 
@@ -1693,6 +1693,27 @@ read_import_links:
 	Imports_chartSW07_R := Imports_chartSW07_D
 	Imports_symSW08_R := Imports_symSW08_D  
 	
+	;pos := RegExMatch(scriptBuffer, "im`nJO)^\s*;*\s*#Include\s+([^;\n]*)", OutputVar)  
+	pos := 1
+	importz := []
+	Loop {
+		pos := RegExMatch(scriptBuffer, "i`nm)^[[:blank:]]*;*[[:blank:]]*\#Include[[:blank:]]+([^;\n]+)", OutputVar, pos)
+		if (pos++ <> 0)  ;;spoko, do inkrementacji nie dochodzi gdy false
+		{
+			debug(" #include " OutputVar1)
+			importz.Push(OutputVar1)
+		}
+	} Until pos = 1
+	
+	isDefault := 0
+
+    positions := [-1, -1, -1, -1, -1]  ;default, api, booktabs, chartzoom, symbols  // lub zrobic to przez sortowanie!
+	;if (importz.Length())
+	For importedLink in importz  ;;dwie pętle liniowe, unikamy zagnieżdżeń redukując koszt
+	{
+		;czy w którymś z linków zakończonych na \ (lub pełnej nazwie bez rozszerzenia, jezeli istnieje) istnieja jakieś z domyślnych skryptów
+	
+	}
 	;array, spisac w loopie, zapisac ktore pozycje sa nasze, sprawdzic kolejnosc, zamienic miedzy soba, na pozostale importy nie wplywac niezaleznie czy zakomentowane czy nie
 	;zakomentowane odznaczyc 
 	
@@ -1744,7 +1765,7 @@ read_defaults:
 	Trader_pasADR04_R := Trader_pasADR04_D
 
 	pos := RegExMatch(scriptBuffer, "::([^:\{]+)::([^:\{]+)\{(?i)enter}", OutputVar)
-	if (pos) {
+	if (pos && login != LOGIN_PATTERN) {
 		password := OutputVar1 OutputVar2
 		debug("-- pass  <<=  " password)
 		Trader_passED03_R := password
