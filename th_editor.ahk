@@ -1705,21 +1705,70 @@ read_import_links:
 		}
 	} Until pos = 1
 	
-	isDefault := 0
+	defaultOK := 0
 
     positions := [-1, -1, -1, -1, -1]  ;default, api, booktabs, chartzoom, symbols  // lub zrobic to przez sortowanie!
 	;if (importz.Length())
-	For importedLink in importz  ;;dwie pętle liniowe, unikamy zagnieżdżeń redukując koszt
+	expectedAHKs := 
+	
+	For _, sfile in DIR_SCRIPTS
 	{
+		expectedAHKs .= "|" ripPath(sfile)
+	}
+	
+	For _, importedLink in importz  ;;dwie pętle liniowe, unikamy zagnieżdżeń redukując koszt
+	{
+		fext  := ripPath(importedLink, 3)
+		fdir  := ripPath(importedLink, 2)
+		fname := ripPath(importedLink)		
+
+		if (!fext && defaultOK)
+			continue
+			
+		if (!fext)
+		{
+			if checkScriptsExist(fdir)
+			{
+				positions[0] := A_Index
+				defaultOK := 1
+				continue
+			}
+		}
+		else if inStr(expectedAHKs, fname)
+		{
+			debug(">>>> in " fname)
+		}
+/*
+			if (count, regexReplace(Folder, "(\\)", "\\", count)) > 1
+			{ 
+			;sprawdź czy nie został wybrany wewnętrzny folder (2 poziomy max)
+				Folder := directoryPop(Folder, count)
+				;msgbox % Folder
+				
+				if checkScriptsExist(Folder)
+					break
+				;if (--count > 1 && ++iter < 3)
+				;	GoSub, again  ;;wymaga returna? blad ahk
+			}
+*/		
+		
+		debug("iteration ["  A_Index "] fname [" fname "] fdir [" fdir "] fext [" fext "]")
+		
+		if checkScriptsExist(fdir)
+			break
+			
+		;;Folder := directoryPop(Folder, count)			
 		;czy w którymś z linków zakończonych na \ (lub pełnej nazwie bez rozszerzenia, jezeli istnieje) istnieja jakieś z domyślnych skryptów
 	
 	}
+	debug("positions ["  positions "]")
 	;array, spisac w loopie, zapisac ktore pozycje sa nasze, sprawdzic kolejnosc, zamienic miedzy soba, na pozostale importy nie wplywac niezaleznie czy zakomentowane czy nie
 	;zakomentowane odznaczyc 
 	
 	;przeloopowac i dla kazdego autohotkeya/wewnetrznego autohotkeya sprawdzic czy zawiera jakis z def skryptow
   
 return
+
 
 
 read_defaults:
