@@ -19,7 +19,7 @@ debug(msg_, var_ = "")
   debugScript := "debug.ahk ahk_class AutoHotkey"
   DetectHiddenWindows On
   if WinExist(debugScript) {
-    debugmsg := msg_ "|" var_
+    debugmsg := msg_ "||" var_
     VarSetCapacity(DataStruct, 3*A_PtrSize, 0)
     msgBytes := (StrLen(debugmsg) + 1) * (A_IsUnicode ? 2 : 1)
     NumPut(msgBytes, DataStruct, A_PtrSize)
@@ -48,8 +48,8 @@ DebugMonitor( wParam, lParam )
   {
     addr := NumGet(lParam + 2*A_PtrSize)
     strg := StrGet(addr)
-    data1 := StrSplit(strg,"|")[1]
-    data2 := StrSplit(strg,"|")[2]
+    data1 := StrSplit(strg,"||")[1]
+    data2 := StrSplit(strg,"||")[2]
     if (data1 = "clear" && data2 = "")
       GoSub, clear
     else 
