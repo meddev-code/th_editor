@@ -15,7 +15,8 @@ DIR_BOOKTABS := "skrypty\booktabs.ahk"
 DIR_CHARTZOOM := "skrypty\chartzoom.ahk"
 DIR_SYMBOLS := "symbols\Symbols.ahk"
 
-DIR_SCRIPTS := [DIR_API, DIR_BOOKTABS, DIR_CHARTZOOM, DIR_SYMBOLS]
+;DIR_SCRIPTS := { "Api-start.ahk":("1|"(DIR_API)), "booktabs.ahk":"2|"(DIR_BOOKTABS), "chartzoom.ahk":"3|"(DIR_CHARTZOOM), "Symbols.ahk":"4|"(DIR_SYMBOLS)}
+DIR_SCRIPTS := { (DIR_API):1, (DIR_BOOKTABS):2, (DIR_CHARTZOOM):3, (DIR_SYMBOLS):4 }
 BTN_IMPORTS := ["Imports_apiED05", "Imports_bookED06", "Imports_chartED07", "Imports_symED08"]
 
 ;zmienne skryptowe
@@ -1242,8 +1243,8 @@ ahk_checkbooks:
   GuiControlGet, bookschecked,, Imports_bookSW06
 
   ;if (!AHK_UPDATED) {  ;to kiedys sprawdzic czy uproscic, czy link potrzebny
-	link := Imports_bookED06_L ? Imports_bookED06_L : Imports_bookED06_R
-	default := (CloudBtnED04_L ? CloudBtnED04_L : CloudBtnED04_R) "\" Imports_bookED06_D
+	link := currentValue("Imports_bookED06")  ;_L ? Imports_bookED06_L : Imports_bookED06_R
+	default := currentValue("CloudBtnED04") "\" Imports_bookED06_D ;_L ? CloudBtnED04_L : CloudBtnED04_R) "\" Imports_bookED06_D
 	;debug("default " default)
 	;debug("link " link)
 	linkExist := FileExist(link) 
@@ -1571,7 +1572,7 @@ edit_canceled:
     ;Tooltip %  !%ctrl1%_L ? %ctrl1%_R : %ctrl1%_L
 	try GuiControlGet, %ctrl1%
 	
-    GuiControl, Text, %ctrl1%, % %ctrl1%_L != 0 && !%ctrl1%_L ? %ctrl1%_R : %ctrl1%_L
+    GuiControl, Text, %ctrl1%, % %ctrl1%_L != 0 && currentValue(ctrl1) ;!%ctrl1%_L ? %ctrl1%_R : %ctrl1%_L
     sleep, 10
 	try GuiControlGet, %ctrl1%
 	%ctrl1%_I := badEntry(ctrl1, RegExMatch(%ctrl1%, %ctrl1%_pattern))
@@ -1697,30 +1698,35 @@ read_import_links:
 	pos := 1
 	importz := []
 	Loop {
-		pos := RegExMatch(scriptBuffer, "i`nm)^[[:blank:]]*;*[[:blank:]]*\#Include[[:blank:]]+([^;\n]+)", OutputVar, pos)
+		pos := RegExMatch(scriptBuffer, "i`nm)^[[:blank:]]*;*[[:blank:]]*\#Include[[:blank:]]+([^;\n\r]+)", OutputVar, pos)
 		if (pos++ <> 0)  ;;spoko, do inkrementacji nie dochodzi gdy false
 		{
 			debug(" #include " OutputVar1)
-			importz.Push(OutputVar1)
+			importz.Push(Trim(OutputVar1))
 		}
 	} Until pos = 1
 	
 	defaultOK := 0
 
-    positions := [-1, -1, -1, -1, -1]  ;default, api, booktabs, chartzoom, symbols  // lub zrobic to przez sortowanie!
+    positions := [-1, -1, -1, -1, -1]  ;autohotkey, api, booktabs, chartzoom, symbols  // lub zrobic to przez sortowanie!
 	;if (importz.Length())
 	expectedAHKs := 
 	
-	For _, sfile in DIR_SCRIPTS
+	;debug("importz length ? " importz.length(), A_LineNumber)
+	
+	For sfile in DIR_SCRIPTS ;_, 
 	{
-		expectedAHKs .= "|" ripPath(sfile)
+		debug(A_Index " ::: " sfile)
+		expectedAHKs .= ";" sfile ;ripPath(StrSplit(sfile, "|")[2])
+		debug(expectedAHKs)
 	}
 	
 	For _, importedLink in importz  ;;dwie pętle liniowe, unikamy zagnieżdżeń redukując koszt
 	{
+
 		fext  := ripPath(importedLink, 3)
 		fdir  := ripPath(importedLink, 2)
-		fname := ripPath(importedLink)		
+		fname := ripPath(importedLink)
 
 		if (!fext && defaultOK)
 			continue
@@ -1731,13 +1737,21 @@ read_import_links:
 			{
 				positions[0] := A_Index
 				defaultOK := 1
-				continue
 			}
+			continue			
 		}
-		else if inStr(expectedAHKs, fname)
+		else if (fname && InStr(expectedAHKs,fname))
 		{
-			debug(">>>> in " fname)
+			;StringUpper, scriptvar, ripPath(fname, 4)  ;;wydobądź index danego skryptu //wiem, pojebane
+			scriptvar := "DIR_" RegExReplace(fname, "i)(^[[:alpha:]]+).+", "$U1")
+			msgbox % scriptvar " index: " DIR_SCRIPTS[%scriptvar%]  ; StrSplit(DIR_SCRIPTS[fname],"|")[1]
+			positions[DIR_SCRIPTS[%scriptvar%]] := A_Index
+			debug(">>>> " fname " in " expectedAHKs)
 		}
+	
+		debug("POSITION len :: " positions.length() " ::::: " printArray(positions), A_LineNumber)
+		;ahkPath := currentValue(CloudBtnED04)
+		;if (ahkPath != CloudBtnED04_D && !fext)
 /*
 			if (count, regexReplace(Folder, "(\\)", "\\", count)) > 1
 			{ 
@@ -2174,7 +2188,7 @@ ahk_update:
 	if (!enabled)
 		continue
 
-	link := %ctrl%_L ? %ctrl%_L : %ctrl%_R
+	link := currentValue(ctrl)  ;%ctrl%_L ? %ctrl%_L : %ctrl%_R
 	default := %ctrl%_D
 	defaultPath := CloudBtnED04_L "\" default   ;(CloudBtnED04_L ? CloudBtnED04_L : CloudBtnED04_R) "\" default
 	linkExist := FileExist(link) 
@@ -2276,7 +2290,7 @@ relink_import:
   
   cpath := ipath
   ;;;; split filename 
-  link := %A_GuiControl%_L ? %A_GuiControl%_L : %A_GuiControl%_R
+  link := currentValue(A_GuiControl)  ;"%A_GuiControl%_L ? %A_GuiControl%_L : %A_GuiControl%_R
   fname := ripPath(link)
   def := %A_GuiControl%_D
   defPath :=
@@ -2453,9 +2467,9 @@ return
 checkScriptsExist(dir)
 {
 	global DIR_SCRIPTS
-	For each, script in DIR_SCRIPTS ; Loop, %PPRO%
+	For script in DIR_SCRIPTS ; Loop, %PPRO%  ;_, 
 	{
-	   if FileExist(dir "\" script) 
+	   if FileExist(dir "\" script)
 		  return 1
 	}
 	return 0
@@ -3151,6 +3165,10 @@ scriptStatus(status) {
 		if (changes = 0x0 && switches = 0x0 && !wrongVersion)
 			disable("LastBtn")
 	}
+}
+
+currentValue(control) {
+   return %control%_L ? %control%_L : %control%_R
 }
 
 badEntry(control, flag, num="") {
@@ -4134,6 +4152,14 @@ hasString(haystack, needle) {
         if(v==needle)
             return true
     return false
+}
+
+printArray( strArray )
+{
+  s := ""
+  for i,v in strArray
+    s .= ", " . v
+  return substr(s, 3)
 }
 
 
