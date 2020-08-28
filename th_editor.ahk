@@ -1697,12 +1697,15 @@ read_import_links:
 	;pos := RegExMatch(scriptBuffer, "im`nJO)^\s*;*\s*#Include\s+([^;\n]*)", OutputVar)  
 	pos := 1
 	importz := []
+	commented := []
 	Loop {
-		pos := RegExMatch(scriptBuffer, "i`nm)^[[:blank:]]*;*[[:blank:]]*\#Include[[:blank:]]+([^;\n\r]+)", OutputVar, pos)
+		pos := RegExMatch(scriptBuffer, "i`nm)^[[:blank:]]*(;*)[[:blank:]]*\#Include[[:blank:]]+([^;\n\r]+)", OutputVar, pos)
 		if (pos++ <> 0)  ;;spoko, do inkrementacji nie dochodzi gdy false
 		{
-			debug(" #include " OutputVar1)
-			importz.Push(Trim(OutputVar1))
+			debug(" #include " OutputVar2 (OutputVar1 ? " commented" : "") )
+			importz.Push(Trim(OutputVar2))
+			if (OutputVar1)
+				commented.Push(A_Index)
 		}
 	} Until pos = 1
 	
@@ -1733,29 +1736,42 @@ read_import_links:
 			
 		if (!fext)
 		{
-			if checkScriptsExist(fdir)
+			if checkScriptsExist(fdir)  ;;;ale tutaj trzeba zripować dira!
 			{
-				positions[0] := A_Index
+				positions[1] := A_Index
 				defaultOK := 1
 			}
-			continue			
+			else if	(positions[1] = -1)  ;przypisz i tak, w razie nie znalezienia będzie w czerwonej ramce
+				positions[1] := A_Index
+
+			continue
 		}
 		else if (fname && InStr(expectedAHKs,fname))
 		{
 			;StringUpper, scriptvar, ripPath(fname, 4)  ;;wydobądź index danego skryptu //wiem, pojebane
 			scriptvar := "DIR_" RegExReplace(fname, "i)(^[[:alpha:]]+).+", "$U1")
-			msgbox % scriptvar " index: " DIR_SCRIPTS[%scriptvar%]  ; StrSplit(DIR_SCRIPTS[fname],"|")[1]
-			positions[DIR_SCRIPTS[%scriptvar%]] := A_Index
+			;msgbox % scriptvar " index: " DIR_SCRIPTS[%scriptvar%]  ; StrSplit(DIR_SCRIPTS[fname],"|")[1]
+			positions[DIR_SCRIPTS[%scriptvar%]+1] := A_Index
 			debug(">>>> " fname " in " expectedAHKs)
+			
+			;jezeli to dlugi link i !defaultOK, i zawiera default, rippuj go i do zmiennej i defaultOK bez sprawdzania!
+			if (!defaultOK && (tmpDir := RegExReplace(importedLink, "i)^([A-Z]:\\.*?)" scriptvar, "$1", replaceCount), replaceCount))
+			 { }
+			
+			;w pozniejszym loopie, jezeli rowne jest default, pomin (zostal przypisany na poczatku f)
 		}
 	
 		debug("POSITION len :: " positions.length() " ::::: " printArray(positions), A_LineNumber)
+		debug("--commented positions-- :: " commented.length() " ::::: " printArray(commented), A_LineNumber)
+		debug("zero index :: " positions[0])
 		;ahkPath := currentValue(CloudBtnED04)
 		;if (ahkPath != CloudBtnED04_D && !fext)
+		
 /*
 			if (count, regexReplace(Folder, "(\\)", "\\", count)) > 1
 			{ 
 			;sprawdź czy nie został wybrany wewnętrzny folder (2 poziomy max)
+			;import czy commented???
 				Folder := directoryPop(Folder, count)
 				;msgbox % Folder
 				
