@@ -1705,13 +1705,14 @@ read_import_links:
 			debug(" #include " OutputVar2 (OutputVar1 ? " commented" : "") )
 			importz.Push(Trim(OutputVar2))
 			if (OutputVar1)
-				commented.Push(A_Index)
+				commented[A_Index] := 1
 		}
 	} Until pos = 1
 	
 	defaultOK := 0
 
-    positions := [-1, -1, -1, -1, -1]  ;autohotkey, api, booktabs, chartzoom, symbols  // lub zrobic to przez sortowanie!
+	positions := []
+    ;positions := [-1, -1, -1, -1, -1]  ;autohotkey, api, booktabs, chartzoom, symbols  // lub zrobic to przez sortowanie!
 	;if (importz.Length())
 	expectedAHKs := 
 	
@@ -1719,9 +1720,7 @@ read_import_links:
 	
 	For sfile in DIR_SCRIPTS ;_, 
 	{
-		debug(A_Index " ::: " sfile)
 		expectedAHKs .= ";" sfile ;ripPath(StrSplit(sfile, "|")[2])
-		debug(expectedAHKs)
 	}
 	
 	For _, importedLink in importz  ;;dwie pętle liniowe, unikamy zagnieżdżeń redukując koszt
@@ -1730,44 +1729,49 @@ read_import_links:
 		fext  := ripPath(importedLink, 3)
 		fdir  := ripPath(importedLink, 2)
 		fname := ripPath(importedLink)
+		defaultDir :=
 
 		if (!fext && defaultOK)
 			continue
 			
 		if (!fext)
 		{
-			if checkScriptsExist(fdir)  ;;;ale tutaj trzeba zripować dira!
+			if (!commented[A_Index] && checkScriptsExist(fdir))  ;;;ale tutaj trzeba zripować dira!
 			{
 				positions[1] := A_Index
 				defaultOK := 1
 			}
-			else if	(positions[1] = -1)  ;przypisz i tak, w razie nie znalezienia będzie w czerwonej ramce
+			else if	(!positions[1])  ;przypisz i tak, w razie nie znalezienia będzie w czerwonej ramce
+			{
 				positions[1] := A_Index
+		    }
 
 			continue
 		}
 		else if (fname && InStr(expectedAHKs,fname))
 		{
+			debug("[> " fname " IS VALID FILE", A_LineNumber)
 			;StringUpper, scriptvar, ripPath(fname, 4)  ;;wydobądź index danego skryptu //wiem, pojebane
 			scriptvar := "DIR_" RegExReplace(fname, "i)(^[[:alpha:]]+).+", "$U1")
 			;msgbox % scriptvar " index: " DIR_SCRIPTS[%scriptvar%]  ; StrSplit(DIR_SCRIPTS[fname],"|")[1]
 			positions[DIR_SCRIPTS[%scriptvar%]+1] := A_Index
-			debug(">>>> " fname " in " expectedAHKs)
 			
 			;jezeli to dlugi link i !defaultOK, i zawiera default, rippuj go i do zmiennej i defaultOK bez sprawdzania!
-			if (!defaultOK && (tmpDir := RegExReplace(importedLink, "i)^([A-Z]:\\.*?)" scriptvar, "$1", replaceCount), replaceCount))
-			 { }
-			
+			if (!defaultOK && !commented[A_Index])
+			{
+			  needle := "i)^([A-Z]:\\.*?)" RegExReplace(%scriptvar%, "(\\)", "\\", count)
+			  defaultDir := RegExReplace(importedLink, needle, "$1", replaceCount)
+			  if (replaceCount && checkScriptsExist(defaultDir))
+			  {
+  			    debug("[> DIR RIP :: " defaultDir, A_LineNumber)  ;sprawdzic bez pierwszego importu
+			    defaultOK := 1
+			  }
+			}
 			;w pozniejszym loopie, jezeli rowne jest default, pomin (zostal przypisany na poczatku f)
 		}
-	
-		debug("POSITION len :: " positions.length() " ::::: " printArray(positions), A_LineNumber)
-		debug("--commented positions-- :: " commented.length() " ::::: " printArray(commented), A_LineNumber)
-		debug("zero index :: " positions[0])
-		;ahkPath := currentValue(CloudBtnED04)
-		;if (ahkPath != CloudBtnED04_D && !fext)
 		
-/*
+		
+		/*
 			if (count, regexReplace(Folder, "(\\)", "\\", count)) > 1
 			{ 
 			;sprawdź czy nie został wybrany wewnętrzny folder (2 poziomy max)
@@ -1781,17 +1785,36 @@ read_import_links:
 				;	GoSub, again  ;;wymaga returna? blad ahk
 			}
 */		
-		
-		debug("iteration ["  A_Index "] fname [" fname "] fdir [" fdir "] fext [" fext "]")
-		
-		if checkScriptsExist(fdir)
-			break
-			
+				
 		;;Folder := directoryPop(Folder, count)			
 		;czy w którymś z linków zakończonych na \ (lub pełnej nazwie bez rozszerzenia, jezeli istnieje) istnieja jakieś z domyślnych skryptów
 	
 	}
-	debug("positions ["  positions "]")
+	if (!defaultDir && positions[1])
+		defaultDir := importz[positions[1]]
+
+	validImportz := []
+	
+	if (defaultDir)
+	{
+		CloudBtnED04_R := defaultDir
+		validImportz.Push(defaultDir)
+		debug("[> pushing:: 1: " defaultDir)
+	}
+	
+	Loop % DIR_SCRIPTS.Count()    ;;tu stworzyc juz z includami i zakomentowaniem
+	{
+	  idx := A_Index + 1
+	  if (positions[idx])
+		validImportz.Push(importz[positions[idx]])
+	  
+	  debug("[> pushing:: " idx ": " importz[positions[idx]])
+	;  if (A_Index > DIR_SCRIPTS.length())
+	;    break
+	
+	;tu obciąć defaulty i jezeli = _D pominac, chyba ze zakomentować
+	}
+
 	;array, spisac w loopie, zapisac ktore pozycje sa nasze, sprawdzic kolejnosc, zamienic miedzy soba, na pozostale importy nie wplywac niezaleznie czy zakomentowane czy nie
 	;zakomentowane odznaczyc 
 	
