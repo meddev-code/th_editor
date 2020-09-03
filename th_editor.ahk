@@ -1702,7 +1702,7 @@ read_import_links:
 		pos := RegExMatch(scriptBuffer, "i`nm)^[[:blank:]]*(;*)[[:blank:]]*\#Include[[:blank:]]+([^;\n\r]+)", OutputVar, pos)
 		if (pos++ <> 0)  ;;spoko, do inkrementacji nie dochodzi gdy false
 		{
-			debug(" #include " OutputVar2 (OutputVar1 ? " commented" : "") )
+			;debug(" #include " OutputVar2 (OutputVar1 ? " (commented)" : "") )
 			importz.Push(Trim(OutputVar2))
 			if (OutputVar1)
 				commented[A_Index] := 1
@@ -1712,10 +1712,9 @@ read_import_links:
 	defaultOK := 0
 
 	positions := []
-    ;positions := [-1, -1, -1, -1, -1]  ;autohotkey, api, booktabs, chartzoom, symbols  // lub zrobic to przez sortowanie!
-	;if (importz.Length())
+	defaultDir :=
 	expectedAHKs := 
-	
+		
 	;debug("importz length ? " importz.length(), A_LineNumber)
 	
 	For sfile in DIR_SCRIPTS ;_, 
@@ -1729,69 +1728,51 @@ read_import_links:
 		fext  := ripPath(importedLink, 3)
 		fdir  := ripPath(importedLink, 2)
 		fname := ripPath(importedLink)
-		defaultDir :=
 
 		if (!fext && defaultOK)
 			continue
 			
-		if (!fext)
+		if (!fext && !commented[A_Index])  ;; sprawdz czy import nie jest domyslnym katalogiem
 		{
-			if (!commented[A_Index] && checkScriptsExist(fdir))  ;;;ale tutaj trzeba zripować dira!
+			if (checkScriptsExist(fdir)) 
 			{
-				positions[1] := A_Index
+				;positions[1] := A_Index
+				defaultDir := fdir
 				defaultOK := 1
 			}
-			else if	(!positions[1])  ;przypisz i tak, w razie nie znalezienia będzie w czerwonej ramce
+			else if	(!defaultDir)  ;przypisz i tak, w razie nie znalezienia będzie w czerwonej ramce
 			{
-				positions[1] := A_Index
+				;positions[1] := A_Index
+				defaultDir := fdir
 		    }
 
 			continue
 		}
-		else if (fname && InStr(expectedAHKs,fname))
+		else if (fname && InStr(expectedAHKs,fname))  ;; znajdz wszystkie wymagane skrypty
 		{
-			debug("[> " fname " IS VALID FILE", A_LineNumber)
+			;debug("[> " fname " IS VALID FILE", A_LineNumber)
 			;StringUpper, scriptvar, ripPath(fname, 4)  ;;wydobądź index danego skryptu //wiem, pojebane
 			scriptvar := "DIR_" RegExReplace(fname, "i)(^[[:alpha:]]+).+", "$U1")
 			;msgbox % scriptvar " index: " DIR_SCRIPTS[%scriptvar%]  ; StrSplit(DIR_SCRIPTS[fname],"|")[1]
-			positions[DIR_SCRIPTS[%scriptvar%]+1] := A_Index
+			positions[DIR_SCRIPTS[%scriptvar%]] := A_Index
 			
 			;jezeli to dlugi link i !defaultOK, i zawiera default, rippuj go i do zmiennej i defaultOK bez sprawdzania!
-			if (!defaultOK && !commented[A_Index])
+			if (!defaultOK && !commented[A_Index] && RegExMatch(importedLink, "i)^[A-Z]:\\"))
 			{
-			  needle := "i)^([A-Z]:\\.*?)" RegExReplace(%scriptvar%, "(\\)", "\\", count)
+			  needle := "i)^([A-Z]:\\.*?)" RegExReplace(%scriptvar%, "(\\)", "\\")
 			  defaultDir := RegExReplace(importedLink, needle, "$1", replaceCount)
 			  if (replaceCount && checkScriptsExist(defaultDir))
 			  {
-  			    debug("[> DIR RIP :: " defaultDir, A_LineNumber)  ;sprawdzic bez pierwszego importu
+  			    ;debug("[> DIR RIP :: " defaultDir, A_LineNumber)  ;sprawdzic bez pierwszego importu
 			    defaultOK := 1
 			  }
 			}
-			;w pozniejszym loopie, jezeli rowne jest default, pomin (zostal przypisany na poczatku f)
 		}
-		
-		
-		/*
-			if (count, regexReplace(Folder, "(\\)", "\\", count)) > 1
-			{ 
-			;sprawdź czy nie został wybrany wewnętrzny folder (2 poziomy max)
-			;import czy commented???
-				Folder := directoryPop(Folder, count)
-				;msgbox % Folder
-				
-				if checkScriptsExist(Folder)
-					break
-				;if (--count > 1 && ++iter < 3)
-				;	GoSub, again  ;;wymaga returna? blad ahk
-			}
-*/		
-				
-		;;Folder := directoryPop(Folder, count)			
-		;czy w którymś z linków zakończonych na \ (lub pełnej nazwie bez rozszerzenia, jezeli istnieje) istnieja jakieś z domyślnych skryptów
-	
 	}
-	if (!defaultDir && positions[1])
-		defaultDir := importz[positions[1]]
+	;if (!defaultDir && positions[1])
+	;{
+	;	defaultDir := importz[positions[1]]
+	;}
 
 	validImportz := []
 	
@@ -1799,26 +1780,52 @@ read_import_links:
 	{
 		CloudBtnED04_R := defaultDir
 		validImportz.Push(defaultDir)
-		debug("[> pushing:: 1: " defaultDir)
+		debug("#Include " defaultDir)
+		;debug("[> pushing:: 0: " defaultDir)
 	}
 	
-	Loop % DIR_SCRIPTS.Count()    ;;tu stworzyc juz z includami i zakomentowaniem
+	Loop % DIR_SCRIPTS.Count()    ;;sortujemy wymagane skrypty
 	{
-	  idx := A_Index + 1
-	  if (positions[idx])
-		validImportz.Push(importz[positions[idx]])
-	  
-	  debug("[> pushing:: " idx ": " importz[positions[idx]])
-	;  if (A_Index > DIR_SCRIPTS.length())
-	;    break
+	  ;idx := A_Index + 1
+	  if (positions[A_Index])
+	  {
+		pushPath := importz[positions[A_Index]]
+		cutted := StrSplit(expectedAHKs,";")[A_Index+1]
+		if (defaultDir && pushPath = defaultDir cutted)
+		{
+			;; obcinamy full link, jezeli jest w domyślnej ścieżce
+			importz[positions[A_Index]] := cutted
+		
+		}
+		validImportz.Push((commented[positions[A_Index]] ? ";" : "") "#Include " importz[positions[A_Index]])
+		debug((commented[positions[A_Index]] ? ";" : "") "#Include " importz[positions[A_Index]])
+		;debug("[> pushing:: " A_Index ": " importz[positions[A_Index]] (commented[positions[A_Index]] ? " (commented)" : ""))
+	  }
+	}
 	
-	;tu obciąć defaulty i jezeli = _D pominac, chyba ze zakomentować
+	validImportz.Push("")
+	validPosition :=
+
+	For _, pointer in positions
+	{
+		validPosition .= ";" pointer
+	}
+	
+	For _, otherLink in importz    ;;sortujemy pozostałe importy
+	{
+		if (InStr(validPosition, A_Index) || otherLink = defaultDir)
+		   continue
+		 
+		needle := "i)^(" RegExReplace(defaultDir, "(\\)", "\\") ")"
+		tmpLink := RegExReplace(otherLink, needle, "", replaceCount)
+		if (replaceCount)
+			otherLink := tmpLink
+
+	    validImportz.Push((commented[A_Index] ? ";" : "") "#Include " otherLink)
+		debug((commented[A_Index] ? ";" : "") "#Include " otherLink)
+		;debug("[> pushing other: " otherLink (commented[A_Index] ? " (commented)" : ""))
 	}
 
-	;array, spisac w loopie, zapisac ktore pozycje sa nasze, sprawdzic kolejnosc, zamienic miedzy soba, na pozostale importy nie wplywac niezaleznie czy zakomentowane czy nie
-	;zakomentowane odznaczyc 
-	
-	;przeloopowac i dla kazdego autohotkeya/wewnetrznego autohotkeya sprawdzic czy zawiera jakis z def skryptow
   
 return
 
