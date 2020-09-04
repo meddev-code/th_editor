@@ -928,10 +928,14 @@ register_script:
 
 	;if (RESTART)
 	;{
+		;debug("[>go import links")
 		GoSub, read_import_links
+		;debug("[>should go init cloud folder")
 		if (!PPRO8_PATTERN)
 			GoSub, init_cloud_folder   ;tutaj qsync link, nie w reset
+		;debug("[>go read defaults")
 		GoSub, read_defaults
+		;debug("[>go reset changes")
 		GoSub, reset_changes
 		RESTART := 0
 	;}
@@ -1694,10 +1698,14 @@ read_import_links:
 	Imports_chartSW07_R := Imports_chartSW07_D
 	Imports_symSW08_R := Imports_symSW08_D  
 	
+	CHK_IMPORTS := ["Imports_bookSW06_R", "Imports_chartSW07_R", "Imports_symSW08_R"] ;;switche
+	
+	
 	;pos := RegExMatch(scriptBuffer, "im`nJO)^\s*;*\s*#Include\s+([^;\n]*)", OutputVar)  
 	pos := 1
 	importz := []
 	commented := []
+	noext := []
 	Loop {
 		pos := RegExMatch(scriptBuffer, "i`nm)^[[:blank:]]*(;*)[[:blank:]]*\#Include[[:blank:]]+([^;\n\r]+)", OutputVar, pos)
 		if (pos++ <> 0)  ;;spoko, do inkrementacji nie dochodzi gdy false
@@ -1709,11 +1717,13 @@ read_import_links:
 		}
 	} Until pos = 1
 	
-	defaultOK := 0
+	;defaultOK := 0
 
 	positions := []
 	defaultDir :=
 	expectedAHKs := 
+	commonPaths := {}
+	api_position :=
 		
 	;debug("importz length ? " importz.length(), A_LineNumber)
 	
@@ -1729,33 +1739,73 @@ read_import_links:
 		fdir  := ripPath(importedLink, 2)
 		fname := ripPath(importedLink)
 
-		if (!fext && defaultOK)
-			continue
+		;if (!fext && (commented[A_Index] || defaultOK))
+		;	continue
 			
-		if (!fext && !commented[A_Index])  ;; sprawdz czy import nie jest domyslnym katalogiem
+		if (!fext)  ;; sprawdz czy import nie jest domyslnym katalogiem
 		{
-			if (checkScriptsExist(fdir)) 
-			{
+			noext[A_Index] := 1
+			;if (checkScriptsExist(fdir)) 
+			;{
 				;positions[1] := A_Index
+			if (!commented[A_Index] && checkScriptsExist(fdir))
 				defaultDir := fdir
-				defaultOK := 1
-			}
-			else if	(!defaultDir)  ;przypisz i tak, w razie nie znalezienia będzie w czerwonej ramce
-			{
+				;defaultOK := 1
+			;}
+			;else if	(!defaultDir)  ;przypisz i tak, w razie nie znalezienia będzie w czerwonej ramce
+			;{
 				;positions[1] := A_Index
-				defaultDir := fdir
-		    }
+				;defaultDir := fdir
+		    ;}
 
 			continue
 		}
+
 		else if (fname && InStr(expectedAHKs,fname))  ;; znajdz wszystkie wymagane skrypty
 		{
 			;debug("[> " fname " IS VALID FILE", A_LineNumber)
 			;StringUpper, scriptvar, ripPath(fname, 4)  ;;wydobądź index danego skryptu //wiem, pojebane
 			scriptvar := "DIR_" RegExReplace(fname, "i)(^[[:alpha:]]+).+", "$U1")
 			;msgbox % scriptvar " index: " DIR_SCRIPTS[%scriptvar%]  ; StrSplit(DIR_SCRIPTS[fname],"|")[1]
-			positions[DIR_SCRIPTS[%scriptvar%]] := A_Index
+			scriptIdx := DIR_SCRIPTS[%scriptvar%]
+						
+			if (positions[scriptIdx] && !commented[positions[scriptIdx]])
+			{
+				commented[A_Index] := 1
+				continue
+			}
+			positions[scriptIdx] := A_Index
+
+			;update paths
+			try {
+				ictrl := BTN_IMPORTS[scriptIdx]
+				%ictrl%_R := importedLink
+				%ictrl%_sR := buttonPath(importedLink)
+			}
 			
+			;potrzebne by upewnic sie ze jest odkomentowane
+			if (scriptIdx == 1)
+				api_position := A_Index
+			else
+			;import checkbox
+			{ 
+				try {
+					chkbox := CHK_IMPORTS[scriptIdx-1]
+					%chkbox% := !commented[A_Index]
+				}
+			}
+			
+			;zliczaj najpopularniejsze sciezki (wskażą domyślny katalog w razie potrzeby)
+			if (!defaultDir && RegExMatch(importedLink, "i)^[A-Z]:\\"))
+			{
+			  needle := "i)^([A-Z]:\\.*?)" RegExReplace(%scriptvar%, "(\\)", "\\")
+			  result := RegExReplace(importedLink, needle, "$1", replaceCount)
+			  if (replaceCount) ; && checkScriptsExist(defaultDir))
+			  {
+			    commonPaths[result] := commonPaths[result] ? commonPaths[result]+1 : 1
+			  }
+			}
+		/*  ;;rezygnujemy z ripowania katalogu z linkow (narazie, pozniej zliczymy)			
 			;jezeli to dlugi link i !defaultOK, i zawiera default, rippuj go i do zmiennej i defaultOK bez sprawdzania!
 			if (!defaultOK && !commented[A_Index] && RegExMatch(importedLink, "i)^[A-Z]:\\"))
 			{
@@ -1767,20 +1817,43 @@ read_import_links:
 			    defaultOK := 1
 			  }
 			}
+		*/
 		}
 	}
-	;if (!defaultDir && positions[1])
-	;{
-	;	defaultDir := importz[positions[1]]
-	;}
+	
+	;wymuś api-start.ahk włączony
+	if (api_position && commented[api_position])
+	{
+		commented[api_position] := 0
+		debug("[> uncommenting api-start.ahk")
+	}
+	
+	;jezeli brak katalogu domyslnego, spróbuj wyluskac
+	if (!defaultDir && commonPaths)
+	{
+		mostCommon :=
+		
+		For path, count in commonPaths
+		{
+			if (!mostCommon || count > commonPaths[mostCommon])
+				mostCommon := path
+		}
+		
+		if (commonPaths[mostCommon] > 1)
+		{
+			defaultDir := mostCommon
+			debug("[> ripping default dir ::: " defaultDir)
+		}
+	}
 
 	validImportz := []
 	
 	if (defaultDir)
 	{
 		CloudBtnED04_R := defaultDir
+		CloudBtnED04_sR := buttonPath(defaultDir)
 		validImportz.Push(defaultDir)
-		debug("#Include " defaultDir)
+		debug(" #Include " defaultDir)
 		;debug("[> pushing:: 0: " defaultDir)
 	}
 	
@@ -1795,15 +1868,20 @@ read_import_links:
 		{
 			;; obcinamy full link, jezeli jest w domyślnej ścieżce
 			importz[positions[A_Index]] := cutted
+			ictrl := BTN_IMPORTS[A_Index]
+			%ictrl%_R := cutted
+			%ictrl%_sR := cutted
+
 		
 		}
 		validImportz.Push((commented[positions[A_Index]] ? ";" : "") "#Include " importz[positions[A_Index]])
-		debug((commented[positions[A_Index]] ? ";" : "") "#Include " importz[positions[A_Index]])
+		debug((commented[positions[A_Index]] ? "[" : " ") "#Include " importz[positions[A_Index]] (commented[positions[A_Index]] ? "]  commented" : ""))
 		;debug("[> pushing:: " A_Index ": " importz[positions[A_Index]] (commented[positions[A_Index]] ? " (commented)" : ""))
 	  }
 	}
 	
-	validImportz.Push("")
+	
+	;validImportz.Push("")
 	validPosition :=
 
 	For _, pointer in positions
@@ -1811,9 +1889,10 @@ read_import_links:
 		validPosition .= ";" pointer
 	}
 	
-	For _, otherLink in importz    ;;sortujemy pozostałe importy
+	For _, otherLink in importz    ;;załączamy pozostałe importy
 	{
-		if (InStr(validPosition, A_Index) || otherLink = defaultDir)
+	    otherLink := RTrim(otherLink, OmitChars := "\")
+		if (InStr(validPosition, A_Index) || otherLink = defaultDir || (noext[A_Index] && commented[A_Index]))
 		   continue
 		 
 		needle := "i)^(" RegExReplace(defaultDir, "(\\)", "\\") ")"
@@ -1822,8 +1901,8 @@ read_import_links:
 			otherLink := tmpLink
 
 	    validImportz.Push((commented[A_Index] ? ";" : "") "#Include " otherLink)
-		debug((commented[A_Index] ? ";" : "") "#Include " otherLink)
-		;debug("[> pushing other: " otherLink (commented[A_Index] ? " (commented)" : ""))
+		;debug((commented[A_Index] ? "[" : " ") "#Include " otherLink (commented[A_Index] ? "]  commented" : ""))
+		debug("[> pushing other: " otherLink (commented[A_Index] ? " (commented)" : ""))
 	}
 
   
@@ -2002,6 +2081,7 @@ init_cloud_folder:
   if (CloudBtnED04_R != CloudBtnED04_D && InStr(FileExist(CloudBtnED04_R), "D") && checkScriptsExist(CloudBtnED04_R))
   {
 	if (CloudBtnED04_R != Q_PATH) {
+		debug("Q_PATH := " CloudBtnED04_R, A_LineNumber)
 		;RegWrite, REG_SZ, HKEY_CURRENT_USER, Software\TraderHouse\script, Qsync, CloudBtnED04_R ;w ahk_founded
 		Q_PATH := CloudBtnED04_R
 	}
@@ -2055,7 +2135,7 @@ init_cloud_folder:
   } 
 */
 	
-  S_PATH := StrLen(Q_PATH) > 32 ? shortenPath(Q_PATH, 29) : Q_PATH
+  S_PATH := buttonPath(Q_PATH)  ;StrLen(Q_PATH) > 32 ? shortenPath(Q_PATH, 29) : Q_PATH
   
   CloudBtnED04_R := Q_PATH
   CloudBtnED04_sR := S_PATH
@@ -2168,7 +2248,7 @@ relink_cloud_folder:
   
   GuiControl, Hide, Yellow_CloudBtnED04
   Q_PATH := Folder
-  S_PATH := StrLen(Q_PATH) > 32 ? shortenPath(Q_PATH, 29) : Q_PATH
+  S_PATH := buttonPath(Q_PATH)  ;StrLen(Q_PATH) > 32 ? shortenPath(Q_PATH, 29) : Q_PATH
       
 ahk_founded:
   debug(">ahk_founded", A_LineNumber)
@@ -2573,6 +2653,11 @@ getVer(script_file = 0)
 	debug("returning_version " ver)
 	;debug("buffer " buffer)
 	return ver1
+}
+
+buttonPath(path, max := 32)
+{
+	return StrLen(path) > max ? shortenPath(path, max-3) : path
 }
 
 shortenPath(path, len)
@@ -3111,8 +3196,11 @@ enableAll(enabling = 1) {
 		%func%("ResetBtn", 1)
 	%func%("LastBtn", 1)
 	
-  if !enabling
-	GoSub, init_cloud_folder
+  ;if !enabling
+  ;{
+	;debug("[>enable all init cloud folder")
+	;GoSub, init_cloud_folder
+  ;}
 
 }
 
