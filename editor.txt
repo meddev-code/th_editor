@@ -1,0 +1,312 @@
+[wylaczylem init cloud z enabling] -- sprawdzic wszystkie case'y, odblokowanie przez trader id
+
+domyslne katalogi przy szukaniu importow sa z dupy (upewnic sie ze default folder jest brany poprawnie)
+
+importy checkbox 
+
+pozwolic na cloud dir bledny (nie zawiera skryptow) czerwona ramka
+
+skrypt PPRO8 Trader ---> cloud tylko widac ale nie zaskakuje (gdy klikamy dowolny import button)
+nie updatuje sie przycisk
+
+gdy nie istnieje, przycisk bierze stara wartosc ("nie czysci sie ta zmienna??)
+
+importy sie odstawiaja przy zaladowaniu configa
+
+po zaladowaniu configa wskakuje cloud folder z poprzedniego
+
+gdy nie ma includa katalogowego a jest przypisany a pozniej ma nazwe autohotkey < to wez tego
+
+ale to default folder dopiero w updacie cloud ??  lub zliczyc wszystkie linki, gdy powtarza sie sciezka to ja uznac za default?
+
+--- skroc ...\autohotkey\ |... --> cloud
+
+w import, jezeli nie bylo z rejestru poprawnego, ani z heurystyki, daj linka z importów w czerwonej ramce!, nie aktywuj reszty
+
+
+przy importach nie skracac, przy relinku/updacie juz tak
+			
+ ;;GDY JEST DEFAULT, ZABLOKOWAC IMPORTS??? JE¯ELI NIE MA DOMYŒLNEGO TO PRZEPUŒCIÆ LINKI JE¯ELI JAKIŒ PE£NY?
+ ;bo nie wraca do wybierz folder
+
+musi byc import poprawny lub conajmniej z rejestru sciezka cloudbtn po resecie
+
+bo restarcie cloud folder niepoprawnie link do ahk_check
+reset nie resetuje i nie zeruje
+
+odblokowuje importy po starcie gdy maja byc zabloko
+
+
+miga w chuj, przy ruchach myszka, pozniej sie wyklada
+
+
+script path :: jezeli cloud path zawarty :: obetnij, potraktuj domyœlnie
+
+importy
+
+
+gdy login zmieniony wpisac w skrypt na swiezo z iloscia liter
+
+przyciski , na <, . na > ---- rozpoznawaæ oba!
+zaimplementowaæ ograniczenie sliderami!
+
+utworzyc nowy? -> try copy szablon || copy default, importy dopiero po zapisz i uruchom
+                  
+				  R <- ale przywrocic --->wybierz cloud folder _D
+				  
+load last         R <- try all || szablon || default
+
+
+przy nowym configu importy nie uwzglednione
+sprawdziæ czy sciezka istnieje -> enable, inaczej --->wybierz config, disable imports
+
+przystosowac do api? ---> kopia zapasowa
+
+import configa a nie szablonu! z szablonu tylko jezeli jest a brakuje w configu ---- nah, config nawet new bedzie z szablonu (ale stare configi beda nie z szablonu i niepelne)
+wszystko import z configa
+=========================================
+warning brakuje szablonu PPRO8 Trader.ahk
+
+w lokalizacji c:\trader\
+
+
+zostanie stworzony domyœlny config.
+==========================================
+
+;  FileExist(PPRO8_TRADER := CloudBtnED04_L "\PPRO8 Trader.ahk")
+;  GoSub, import_defaults   WYJEBAC TO DO RESETING
+ 
+i teraz sprawdzic osobno przy resetting czy jest skrypt szablonowy czy przekazac do ahk_founded
+
+ 
+import nieprawid³owych wartoœci nie wpisuje w "warrnings"
+data_check podczas resetu?
+
+jezeli istnieje szablon w katalogu qsync
+szablon musi miec glowna wersje == apka, wczesniejszza -- ostrzezenie, pozniejsza -- ostrzezenie
+
+po uruchomieniu updatowaæ defaults z szablonu, pierwsza cyfra szablonu musi byc nie wieksza niz apki, jezeli wyzsza ("wersja szablonu wy¿sza od wersji programu, aplikacja wymaga doprogramowania nowych zmian")
+wersja szablonu <- zmienna, porownac do wczytywanego skryptu, ostrzezenie obok uruchom
+
+buy/sell hand nieprzypisane domyœlnie
+
+wersja wypozycjonowaæ
+
+(!) APPVERSION musi byc wieksze od wersji skryptu g³ównego -- warrning przy wlaczaniu
+VERSION importowaæ z katalogu cloud folder, je¿eli nie ma, utwórz czysty PPRO8 Trader.ahk kopiujac z folderu apki
+
+- jezeli default path wpisuje sie w link, konwert full link na default
+
+tools entrycents, jezeli zmiany (reset) : tools zablokowane
+
+
+gdy brak PPRO8 Trader zezwolic z domyslnych programu, jezeli jest, wpisac w domyslne skrypt Trader i ostrzec o nieaktualnosci programu
+
+
+po za³aduj i uruchom / za³aduj
+traderCorrected := 0
+versionDifferences := 0
+
+informacja z konwersja skryptu studenta, jezeli nie ma api-start ::: gdy nie ma api-start (albo olaæ)
+ale po zmianie tradera... zapisz i uruchom (resetu nie)
+
+LINK IMPORT SCRIPT
+UPDATE SCRIPT ACTION, INFORMACJA O ZMIANACH
+IKONA INFA O ZMIANACH PRAWY DOLNY RÓG, WYGASZONA PO PIERWSZYM ZALUKANIU -> REJESTR, gdy nie zobaczone pokazaæ przy za³aduj
+	
+po resecie i cloud siê zmieni³ :::::: sprawdzaj i blokuj ewentualnie imports
+	
+GDY ANULUJ Z TWORZENIA SKRYPTU -> NIE UNLOCKUJ
+GDY OK -> UTWÓRZ SKRYPT -> UNLOCK, wpisz w btn link do tego nowego skryptu
+
+GoSub, check_cloud_folder  ;TO PRZENIEŒÆ DO IMPORT CHANGES!!! -----NAJPIERW SPR LINK Z CONFIGA-----------------------------------------------------
+;ALBO TU TE¯! JE¯ELI LINK Z CONFIGA NIE ISTNIEJE, A WYKRYTO Z HEURYSTYKI, PYTANIE CZY UPDATOWAÆ IMPORTY
+
+
+PROGRAM MA DWA TRYBY, URUCHAMIANY Z QSYNC (CLOUD NA STA£E), UWOLNIONY
+sta³a ZEZWOLIÆ NA ODPALANIE POZA QSYNC
+
+URUCHOM --- goto first warrning
+
+reset cloudvar spr czerw
+sprawdziæ reset Slider, Wykresów
+spowolniæ chartzoom skrypt
+wykrywaæ czy to nie skrypt studenta -- warrning odrzuc
+
+przy odpalaniu bierz folder autohotkey z configa (nie z rejestru) jak resztê! je¿eli œcie¿ka siê nie zgadza, to PYTANIE o (heur update) wtedy na czerwono!
+
+AutoHotKey do rejestru tylko dlatego ¿eby inni u¿ytkownicy mieli domyœln¹ œcie¿kê przy tworzeniu skryptu!
+je¿eli œcie¿ka wpisana z configa, i tak domyœlna œcie¿ka przy wyborze bêdzie t¹ z rejestru!
+
+PO ZA£ADOWANIU LINKA AUTOHOTKEY, JE¯ELI KTÓREŒ ZE SKRYPTÓW ISTNIEJ¥ -- CONFIRM DO UPDATU LINKÓW (TYLKO JE¯ELI STARE LINKI ISTNIEJ¥ I SIÊ RÓ¯NI¥
+INACZEJ CZERWONA RAMKA DO TYCH, KTÓRE NIE ISTNIEJ¥
+
+po manipulacjach importów zawsze sprawdŸ ich aktualnoœæ, te¿ przy przywracaniu okienka (je¿eli skrypt za³adowany)
+
+przy otwarciu edytora: zczytaj z pliku
+przy wybieraniu scie¿ki próbuj najpierw z rejestru, póŸniej z pliku
+
+importy domyœlnie pod autohotkey
+je¿eli w³asny link --> pe³na œcie¿ka
+przy wybieraniu importu, je¿eli anuluj --> reset do bez-œcie¿ki, je¿eli tam problem -> czerwona ramka
+
+zblokowane je¿eli œcie¿ka AutoHotKey nie wykryta:
+#Include ramdisk_api\api\API-start.ahk
+#Include skrypty\booktabs.ahk
+;#Include skrypty\chartzoom.ahk      ;;<-dla wykresow ppro8
+#Include Symbols\Symbols.ahk
+
+
+sprawdziæ czy reset powinien resetowaæ koordynaty chartzoom
+
+zalatwic komentarze w reset_changes
+wyjebac CloudBtnED004 z edit_proceed
+zaladuj i uruchom: errorcheck AND EMPTY all and goto first
+
+po imporcie wartoœci ----> gui
+
+haslo reset check kilkuliterowe
+
+--konsument@chronpesel.pl
+
+keymapper
+przetrzebic ponizsze hinty
+
+create script (old sav with timestamp, hidden attribute)
+sprawdŸ wersjê z szablonem (buttony update)
+
+plik szablonu na qsync, je¿eli nie istnieje i w rejestrze te¿ nie ma info, dodatkowe modalne pytanie ---> do rejestru
+sprawdziæ gdzie byla heurystyka i dodac
+
+importy disabled gdy checkbox off, linki? TH Cloud Autohotkey Folder?
+czy da sie pominac przekierowanie do gdata_check z focus? sprawdzanie realtime nie dziala
+
+importy odblokuj z pobranego skrytpu jezeli skrypt up to date, inaczej force qsync choose?
+przy nowy skrypt imports disabled (chyba ze autohotkey founded i skrypty istnieja)
+
+szablon PPRO8 Trader na wskazanym qsync, w przypadku braku -> hardcoded
+
+;sprawdzic kazdy import osobno -najpierw import z ahk - pozniej w qpath (luzem i /skrypty /ramdisk_api /api) , umozliwic wybor przez fileselect
+;jezeli recznie, tez po edycji sprawdzic i enable + ew. error lub warrning
+
+pobranie i screenshot z R pierwszego dowolnego wykresu z grup¹ (1-9)
+odznaczenie chartzoom po zmianach : pytanie czy odrzucic zmiany
+
+
+buy hand -> choose hotkey window ->clear -> clean button, label disabled
+
+spersonalizowane skroty zrobic liste liter wylaczonych, jak "w" ---- albo zrobic random hash albu do skryptu glownego
+
+
+choose dir autohotkey --- wskaz tylko qsynca w (rozpoznanie roznych wariantach)
+
+yellow border + exc i refresh gdy dany import out of date
+
+--robi sie suspend po zaakceptowaniu nowej sciezki
+--prawidlowe rozpoznawanie zmiane pliku (watcher), likwidacja dublacji
+
+zmiana sizu alt++ gdy order otwarty! zmienia spolke
+
+przeniesc updown prawo dol, ctrl+shift+alt buttons do qls
+
+dragndrop
+
+check ramdisk
+
+czy booktabs mozna bez api? rozwazyc zakladke up, updowns orders hide/disable
+
+reczne wlasne
+
+;;;;;;bezsens, sprawdz od razu //tooltipy tray - api niezaladowane, inny plik blad (tolltipy do bledy importow)
+
+zaznacz ikonê na wykresie (cross cursor)
+zaznacz ikonê lupy (+)
+(new y - mediana z iconline i new point y)
+zoom / minimize buttonz
+
+maximize/minimize - wykres do booka, nie inny
+
+cyfry -> booki spowolnily! tab chodzi szybko
+
+w Importach, gdy wlasna sciezka ->>> button do update script! (out of date)
+
+reczne linki importow
+
+updatowac szablon ze skryptu glownego, entry, sub, ctrl+r
+
+okienko dwa edki 3 przyciski dynamicznego crossa
+okienko dynamicznie ustawianego edka, plus checkbox na rozbicie i czy od razu zatwierdzaæ
+polowa na /
+
+minimalizuj tray
+
+tray menu `blocked\ToDoList
+
+SubCross
+
+tools : autohotkey floating on/off, 
+
+zapamietywac taby
+pozycje okna
+url skryptu
+url 
+maila
+haslo
+zakladka
+
+
+global home end pgup pgdn, jezeli book i skrypt wylaczony -> ostrzezenie, pytanie czy aktywowac
+
+addon: automatyczne zabezpieczenie edka::: po sprzedazy dopasowac size z nowym edkiem w poprzedniej pozycji
+
+charts info / * max/min
+
+check skrypty slawek, iras
+
+tray menu wlasne do dodatkowych skryptow tez
+
+shift+pgup/pgdn combo + home/end  polowa!
+
+zaladuj i uruchom (zielony tick wlaczony tylko gdy skrypt aktywny)
+minimize to tray
+
+spr ver przy przeladowaniu
+przy przeladowaniu aktywuj zakladke z bledem
+
+czy pozostale bindy robia konflikt dla skrotow -> red border skroty i key
+
+hasla jakos w 16stkowym lub innym zapisie (check base64)
+
+
+jezeli brak zmian ale wersja do zmiany, odblokuj zaladuj
+
+
+IsLabel("long")
+
+check uruchamianie z qsync
+
+funkcja zabezpieczenie nabierania /geili rouc, watch cena, gdy wzrasta -> wypierdol wszystko
+
+backspace - wyjeb wszystko!
+
+drag and drop na przycisk!
+
+ppro: jezeli book traci focus po enterze na wykres z tego samego stocku, przywroc focus na book
+
+
+ppro8 chartzoom scroll may help:
+SetControlDelay -1
+ControlClick, Toolbar321, WinTitle,,,, NA x192 y10  ; Clicks in NA mode at coordinates that are relative to a named co
+
+
+done:
+
+po resecie wpis kasuje, czyli nie by³o stop_errcheck ;; problem w wyzerowaniu cancelled i confirmed
+zmiana imputa na inny myszka bez zatwierdzania, nie zaznacza, wpycha edit_proceed i stop_errcheck
+zapamietac focus, po errcheck przywrocic (z ^a czy bez?)
+disableAll wpisane jako disabled na poczatku, nie uruchamiane
+login jest silver i znika E po zatwierdzeniu ID na new2.ahk... po breaking loop?
+
+niepotrzebne:
+resetowanie ustwanien zapisywalnych do rejestru -> update --- niekoniecznie! rejest jest dla programu nie dla configa!
+osobne odczytywanie buttonów BT00
