@@ -1,8 +1,13 @@
 [wylaczylem init cloud z enabling] -- sprawdzic wszystkie case'y, odblokowanie przez trader id
 
+enter nie schodzi a okejuje
+zablokowac ownera przy edicie
+
 domyslne katalogi przy szukaniu importow sa z dupy (upewnic sie ze default folder jest brany poprawnie)
 
 importy checkbox 
+
+
 
 pozwolic na cloud dir bledny (nie zawiera skryptow) czerwona ramka
 
