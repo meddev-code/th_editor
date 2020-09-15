@@ -1,6 +1,6 @@
 [wylaczylem init cloud z enabling] -- sprawdzic wszystkie case'y, odblokowanie przez trader id
 
-enter nie schodzi a okejuje
+enter nie schodzi a okejuje  czemu APPNAME blokuje?? gdzie jest check?
 zablokowac ownera przy edicie
 
 domyslne katalogi przy szukaniu importow sa z dupy (upewnic sie ze default folder jest brany poprawnie)

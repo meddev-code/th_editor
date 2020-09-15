@@ -39,6 +39,10 @@ LAYER_YOFF := 130
 LAYER_W := 27
 LAYER_H := 285
 
+EBOX_XOFF := 0
+EBOX_YOFF := -62
+EBOX_W := 500
+EBOX_H := 250
 
 WatcherTriggered := 0
 cloudpath := ["THCloud","TH Cloud","TH_Cloud","TH-Cloud","CloudTH","Cloud TH","Cloud_TH","Cloud-TH","Cloud","TH","Qsync","Qsync TH"]
@@ -136,7 +140,7 @@ CloudBtnED04_itt := "Zły odnośnik do 'AutoHotKey' na TH Cloud - nie znaleziono
 Gui,Add,Picture,x79 y111 w212 h25 Hidden vYellow_CloudBtnED04,%yellow%
 Gui,Add,Picture,x79 y111 w212 h25 Hidden vRed_CloudBtnED04,%red%
 Gui,Add,Button,x80 y112 w210 h23 0x8000 Disabled vCloudBtnED04 grelink_cloud_folder,%CloudBtnED04_R%
-Gui,Add,Button,x330 y112 w70 h23 0x8000 Disabled vRawBtn gedit_imports,Ręcznie
+Gui,Add,Button,x330 y112 w70 h23 0x8000 Disabled vRawBtn gmanual_imports,Ręcznie
 Gui,Add,GroupBox,x70 y150 w340 h165 Disabled vImports_group,Importy
 Gui,Add,Text,x309 y151 w42 h13 Disabled vImports_gtxt1,Aktywny
 Imports_apiED05_T := "Podłącz skrypt Api-start.ahk"
@@ -696,7 +700,13 @@ OnMessage(0x201,"WM_LAYERCLICK")
 Gui 1:Default ;niepotrzebne, bo -LastFound --- -LastFound nie działa
 ;Gui, 7:Hide
 
-;----------------------------------------------tabs layer-----------
+;------------------------------------------imports editor-----------
+
+
+
+
+;-------------------------------------------------------------------
+
 WinActivate, A
 WinRestore, A
 
@@ -1909,6 +1919,90 @@ read_import_links:
 return
 
 
+manual_imports:
+  debug(">manual_imports", A_LineNumber)
+
+	WinGetPos, x, y, WinW, WinH, A
+	x_ebox := x + (WinW - EBOX_W)/2 + EBOX_XOFF
+	y_ebox := y + (WinH - EBOX_H)/2 + EBOX_YOFF	
+	w_edit := EBOX_W - 20
+
+	/*
+
+	Gui, 7:-LastFound +Owner1 -Caption +ToolWindow   ;+AlwaysOnTop
+	trans := 1
+	if (SHOWLAYER)
+	{
+		CustomColor = EEAA99  ; Can be any RGB color.
+		Gui, 7: Color, %CustomColor%
+		trans := 150
+	}
+	;WinSet, TransColor, %CustomColor% 250 ; Make color invisible
+	WinSet, Transparent, % trans
+	x_layer := x + LAYER_XOFF
+	y_layer := y + LAYER_YOFF
+	Gui, 7:Show, x%x_layer% y%y_layer% w%LAYER_W% h%LAYER_H% NoActivate, tablayer
+	Gui, 7:Hide
+	OnMessage(0x201,"WM_LAYERCLICK") 
+	Gui 1:Default ;niepotrzebne, bo -LastFound --- -LastFound nie działa
+	;Gui, 7:Hide
+	*/
+	
+    if !EditorGuiCreated {
+		;Gui, EditorBox: +Owner1
+		;Gui, 3: Add, Edit, x10 y10 w500 h65 vNT
+		Gui, EditorBox: add, Text, r1 w200, Edytuj wpisy ręcznie:
+		Gui, EditorBox: add, Edit, r10 w%w_edit% vEditorBox, ;% Default
+        Gui, EditorBox: add, Button, w60 y+15 gEditorBoxOK , OK  ;&OK
+        Gui, EditorBox: add, Button, w60 x+10 gEditorBoxCancel, Cancel  ;&Cancel
+        EditorGuiCreated := true
+    }
+	;Gui, EditorBox: Show, x%x_ebox% y%y_ebox% w%EBOX_W% h%EBOX_H%, % APPNAME ": #include list"
+	Gui, EditorBox: Show,  x%x_ebox% y%y_ebox% w%EBOX_W% h%EBOX_H%,#include list
+
+	return
+	
+	Esc::Gui, EditorBox: Cancel
+
+	EditorBoxOK:
+	Gui, EditorBox: Submit, NoHide
+	MsgBox, 262208, , %NT%
+	Gui, EditorBox: Cancel
+	return  
+
+	EditorBoxGuiClose:
+    EditorBoxGuiEscape:
+    EditorBoxCancel:
+    Gui, EditorBox: Cancel
+    return	
+	
+
+/*
+Name = Edit Text
+Gui, 3: Add, Edit, x10 y10 w500 h65 vNT
+Gui, 3: Add, Button, x10  y90 gLable, Start
+Gui, 3: Add, Button, x140 y90 gCancel, Cancel
+Gui, 3: Show, Center h120 w550, %Name%
+Return
+Esc::Gui, 3: Cancel
+
+3GuiClose:
+Cancel:
+Gui, 3: Cancel
+return
+
+Lable:
+Gui, 3: Submit, NoHide
+MsgBox, 262208, , %NT%
+Gui, 3: Cancel
+Return
+*/
+
+	;MsgBox % EditorBox("Edytuj wpisy ręcznie:", "", APPNAME ": #include list")
+  
+
+return
+
 
 read_defaults:
   debug(">read_defaults", A_LineNumber)
@@ -2689,10 +2783,6 @@ askCloudUpdate()
 	}
 	return 0
 }
-
-
-edit_imports:
-Return
 
 
 select_chart_icon:
@@ -4260,6 +4350,40 @@ scriptUnSuspend(scriptHWND, SuspendOn = 1) ;ScriptName   BLAD: ZALADOWAC SKRYP Z
     }
     DetectHiddenWindows %dhw%
 }
+
+/*
+EditorBox(Text:="", Default:="", Caption:="Editor"){
+    static
+    ButtonOK:=ButtonCancel:= false
+    if !EditorBoxGui{
+        Gui, EditorBox: add, Text, r1 w600  , % Text
+        Gui, EditorBox: add, Edit, r10 w600 vEditorBox, % Default
+        Gui, EditorBox: add, Button, w60 gEditorBoxOK , &OK
+        Gui, EditorBox: add, Button, w60 x+10 gEditorBoxCancel, &Cancel
+        EditorBoxGui := true
+    }
+    GuiControl,EditorBox:, EditorBox, % Default
+    Gui, EditorBox: Show,, % Caption
+    SendMessage, 0xB1, 0, -1, Edit1, A
+    while !(ButtonOK||ButtonCancel)
+        continue
+    if ButtonCancel
+        return
+    Gui, EditorBox: Submit, NoHide
+    Gui, EditorBox: Cancel
+    return EditorBox
+    ;----------------------
+    EditorBoxOK:
+    ButtonOK:= true
+    return
+    ;---------------------- 
+    EditorBoxGuiEscape:
+    EditorBoxCancel:
+    ButtonCancel:= true
+    Gui, EditorBox: Cancel
+    return
+}
+*/
 
 bitSet(ByRef num, pos) {
 	num |= (1 << pos-1)
