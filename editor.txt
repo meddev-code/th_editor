@@ -1,4 +1,7 @@
 [wylaczylem init cloud z enabling] -- sprawdzic wszystkie case'y, odblokowanie przez trader id
+[zmienilem globalny matching mode z 2 na 3]
+
+po zaladowaniu nowego skryptu watching script przestaje dzialac
 
 enter nie schodzi a okejuje  czemu APPNAME blokuje?? gdzie jest check?
 zablokowac ownera przy edicie
@@ -7,7 +10,7 @@ domyslne katalogi przy szukaniu importow sa z dupy (upewnic sie ze default folde
 
 importy checkbox 
 
-
+wyczyœciæ disabled big icon po resecie / nowym zaladowaniu (nie laduj tej ikony przy uruchamianiu/reloadzie)
 
 pozwolic na cloud dir bledny (nie zawiera skryptow) czerwona ramka
 

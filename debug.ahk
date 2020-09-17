@@ -15,8 +15,10 @@ Return
 debug(msg_, var_ = "")
 {
   static debugmsg
+  tmm := A_TitleMatchMode
   dhw := A_DetectHiddenWindows
   debugScript := "debug.ahk ahk_class AutoHotkey"
+  SetTitleMatchMode,  2
   DetectHiddenWindows On
   if WinExist(debugScript) {
     debugmsg := msg_ "||" var_
@@ -28,6 +30,7 @@ debug(msg_, var_ = "")
     SendMessage, 0x4a, 0, &DataStruct,, %debugScript% ;,,,, %TimeOutTime%
   }
   DetectHiddenWindows %dhw%
+  SetTitleMatchMode, %tmm%
 }
  
 #If DebugWindowInstance

@@ -1,5 +1,5 @@
 ﻿DetectHiddenWindows, On
-SetTitleMatchMode,  2
+SetTitleMatchMode,  3    ;;;;;po co 2???? zmienione 17.09
 ;;; przy wylaczeniu czy zamknac skrypt?
 
 
@@ -42,7 +42,7 @@ LAYER_H := 285
 EBOX_XOFF := 0
 EBOX_YOFF := -62
 EBOX_W := 500
-EBOX_H := 250
+EBOX_H := 210
 
 WatcherTriggered := 0
 cloudpath := ["THCloud","TH Cloud","TH_Cloud","TH-Cloud","CloudTH","Cloud TH","Cloud_TH","Cloud-TH","Cloud","TH","Qsync","Qsync TH"]
@@ -1862,7 +1862,7 @@ read_import_links:
 	{
 		CloudBtnED04_R := defaultDir
 		CloudBtnED04_sR := buttonPath(defaultDir)
-		validImportz.Push(defaultDir)
+		validImportz.Push("#Include " defaultDir)
 		debug(" #Include " defaultDir)
 		;debug("[> pushing:: 0: " defaultDir)
 	}
@@ -1925,6 +1925,7 @@ manual_imports:
 	WinGetPos, x, y, WinW, WinH, A
 	x_ebox := x + (WinW - EBOX_W)/2 + EBOX_XOFF
 	y_ebox := y + (WinH - EBOX_H)/2 + EBOX_YOFF	
+	x_btn  := EBOX_W - 170
 	w_edit := EBOX_W - 20
 
 	/*
@@ -1951,19 +1952,18 @@ manual_imports:
     if !EditorGuiCreated {
 		;Gui, EditorBox: +Owner1
 		;Gui, 3: Add, Edit, x10 y10 w500 h65 vNT
-		Gui, EditorBox: add, Text, r1 w200, Edytuj wpisy ręcznie:
-		Gui, EditorBox: add, Edit, r10 w%w_edit% vEditorBox, ;% Default
-        Gui, EditorBox: add, Button, w60 y+15 gEditorBoxOK , OK  ;&OK
-        Gui, EditorBox: add, Button, w60 x+10 gEditorBoxCancel, Cancel  ;&Cancel
+		Gui, EditorBox: add, Text, r1 w200, edytuj wpisy ręcznie:
+		Gui, EditorBox: add, Edit, r10 w%w_edit% vEditorBox, % listArray(validImportz) ;% Default
+        Gui, EditorBox: add, Button, w70 x%x_btn% y+15 gEditorBoxOK , OK  ;&OK
+        Gui, EditorBox: add, Button, w70 x+10 gEditorBoxCancel, Cancel  ;&Cancel
         EditorGuiCreated := true
     }
-	;Gui, EditorBox: Show, x%x_ebox% y%y_ebox% w%EBOX_W% h%EBOX_H%, % APPNAME ": #include list"
-	Gui, EditorBox: Show,  x%x_ebox% y%y_ebox% w%EBOX_W% h%EBOX_H%,#include list
-
+	;Gui, EditorBox: Show, x%x_ebox% y%y_ebox% w%EBOX_W% h%EBOX_H%, % APPNAME "<#include list>"
+	Gui, EditorBox: Show,  x%x_ebox% y%y_ebox% w%EBOX_W% h%EBOX_H%,% APPNAME ":  #include list"
+	Send ^{Home}
+	
 	return
 	
-	Esc::Gui, EditorBox: Cancel
-
 	EditorBoxOK:
 	Gui, EditorBox: Submit, NoHide
 	MsgBox, 262208, , %NT%
@@ -2089,7 +2089,7 @@ defaultSell :=  "F8"
 ;specialBuy  := "+F4"    ;; operacje bezcenowe, jak np. Parallel-2D Market (zalecany do wychodzenia częścią!)
 ;specialSell := "+F8"    ;; ncsa nasdaq/nyse byx   buy/sell->short parallel-2D market day
 
-polowki := "default"     ;; operacja wychodzenia częścią akcji opcje: default/special
+polowki := "defaultdefault"     ;; operacja wychodzenia częścią akcji opcje: default/special
 half_out   := "/"        ;; przycisk wychodzenia połową          (+shift :: edek)
 one_out    := ","        ;; przycisk wychodzenia jedną/trzecią   (+shift :: edek)
 third_out  := "."        ;; przycisk wychodzenia dwoma/trzecimi  (+shift :: edek)
@@ -3760,6 +3760,7 @@ kill_prosper:
 	GuiControl,, AddonsBtn, 0
 Return
 
+/*
 WinWait(winText="", timeOut="") {
     static break
     break := !winText
@@ -3773,6 +3774,7 @@ WinWait(winText="", timeOut="") {
 
     return ;state
 }
+*/
 
 AddonsMenu()
 {
@@ -4412,13 +4414,22 @@ hasString(haystack, needle) {
     return false
 }
 
-printArray( strArray )
+printArray(strArray, delimiter:= ", ")
 {
-  s := ""
-  for i,v in strArray
-    s .= ", " . v
-  return substr(s, 3)
+  str := ""
+  for i, v in strArray
+  {
+	debug("listing " i ": " v)
+    str .= delimiter . v
+  }
+  return substr(str, StrLen(delimiter)+1)
 }
+
+listArray( strArray )
+{
+  return printArray(strArray, "`n")
+}
+
 
 
 /*
