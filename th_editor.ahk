@@ -716,13 +716,7 @@ New_Column_Order := "3|1|2"
 LV_Set_Column_Order(3, New_Column_Order )
 
 
-OnMessage(0x111,"WM_FOCUS")
-OnMessage(0x200,"WM_MOUSEMOVE")  ;mousemove
-OnMessage(0x201,"WM_MOUSEMOVE")  ;lbuttondown
-OnMessage(0x204,"WM_MOUSEMOVE")  ;rbuttondown
-;;;OnMessage(0x4E, "WM_NOTIFY") juz niepotrzebne
-OnMessage(0x03, "WM_MOVE")
-OnMessage(0x06, "WM_ACTIVATE")
+GoSub, on_messages
 
 OnExit("ExitApp")
 
@@ -752,6 +746,27 @@ Return
 #include DoubleSlider.ahk
 #include gdip.ahk
 #include debug.ahk
+
+
+on_messages:
+	OnMessage(0x111,"WM_FOCUS")
+	OnMessage(0x200,"WM_MOUSEMOVE")  ;mousemove
+	OnMessage(0x201,"WM_MOUSEMOVE")  ;lbuttondown
+	OnMessage(0x204,"WM_MOUSEMOVE")  ;rbuttondown
+	;;;OnMessage(0x4E, "WM_NOTIFY") juz niepotrzebne
+	OnMessage(0x03, "WM_MOVE")
+	OnMessage(0x06, "WM_ACTIVATE")
+Return
+
+off_messages:
+	OnMessage(0x111,"")
+	OnMessage(0x200,"")  ;mousemove
+	OnMessage(0x201,"")  ;lbuttondown
+	OnMessage(0x204,"")  ;rbuttondown
+	;;;OnMessage(0x4E, "WM_NOTIFY") juz niepotrzebne
+	OnMessage(0x03, "")
+	OnMessage(0x06, "")
+Return
 
 
 register_script:
@@ -1695,7 +1710,10 @@ read_import_links:
 ;jezeli nie ma luzem katalogu ogówlnego sprawdzić autohotkey\czy jakis skrypt istnieje z default 
 
 ;IMPORT LINKS JUZ PRZY SPRAWDZANIU CZY POPRAWNY SKRYPT/PRZESTARZAŁY
-	
+	if (minput)
+		GoSub, manual_input
+
+		
 	CloudBtnED04_R := CloudBtnED04_D   ;;0
 			
 	Imports_apiED05_R := Imports_apiED05_D  ;;importy
@@ -1710,7 +1728,7 @@ read_import_links:
 	
 	CHK_IMPORTS := ["Imports_bookSW06_R", "Imports_chartSW07_R", "Imports_symSW08_R"] ;;switche
 	
-	
+manual_input:
 	;pos := RegExMatch(scriptBuffer, "im`nJO)^\s*;*\s*#Include\s+([^;\n]*)", OutputVar)  
 	pos := 1
 	importz := []
@@ -1787,6 +1805,7 @@ read_import_links:
 			positions[scriptIdx] := A_Index
 
 			;update paths
+			if (!minput)
 			try {
 				ictrl := BTN_IMPORTS[scriptIdx]
 				%ictrl%_R := importedLink
@@ -1799,6 +1818,7 @@ read_import_links:
 			else
 			;import checkbox
 			{ 
+				if (!minput)
 				try {
 					chkbox := CHK_IMPORTS[scriptIdx-1]
 					%chkbox% := !commented[A_Index]
@@ -1856,13 +1876,17 @@ read_import_links:
 		}
 	}
 
-	validImportz := []
+	tmpImportz := []
+	if (!minput)
+		validImportz := []
 	
 	if (defaultDir)
 	{
-		CloudBtnED04_R := defaultDir
-		CloudBtnED04_sR := buttonPath(defaultDir)
-		validImportz.Push("#Include " defaultDir)
+		if (!minput) {
+			CloudBtnED04_R := defaultDir
+			CloudBtnED04_sR := buttonPath(defaultDir)
+		}
+		tmpImportz.Push("#Include " defaultDir)
 		debug(" #Include " defaultDir)
 		;debug("[> pushing:: 0: " defaultDir)
 	}
@@ -1878,13 +1902,15 @@ read_import_links:
 		{
 			;; obcinamy full link, jezeli jest w domyślnej ścieżce
 			importz[positions[A_Index]] := cutted
-			ictrl := BTN_IMPORTS[A_Index]
-			%ictrl%_R := cutted
-			%ictrl%_sR := cutted
+			if (!minput) {
+				ictrl := BTN_IMPORTS[A_Index]
+				%ictrl%_R := cutted
+				%ictrl%_sR := cutted
+			}
 
 		
 		}
-		validImportz.Push((commented[positions[A_Index]] ? ";" : "") "#Include " importz[positions[A_Index]])
+		tmpImportz.Push((commented[positions[A_Index]] ? ";" : "") "#Include " importz[positions[A_Index]])
 		debug((commented[positions[A_Index]] ? "[" : " ") "#Include " importz[positions[A_Index]] (commented[positions[A_Index]] ? "]  commented" : ""))
 		;debug("[> pushing:: " A_Index ": " importz[positions[A_Index]] (commented[positions[A_Index]] ? " (commented)" : ""))
 	  }
@@ -1910,12 +1936,22 @@ read_import_links:
 		if (replaceCount)
 			otherLink := tmpLink
 
-	    validImportz.Push((commented[A_Index] ? ";" : "") "#Include " otherLink)
+	    tmpImportz.Push((commented[A_Index] ? ";" : "") "#Include " otherLink)
 		;debug((commented[A_Index] ? "[" : " ") "#Include " otherLink (commented[A_Index] ? "]  commented" : ""))
 		debug("[> pushing other: " otherLink (commented[A_Index] ? " (commented)" : ""))
 	}
 
-  
+	if (minput)
+	{
+		if (EditorGuiCreated && WinExist("ahk_class AutoHotkeyGUI"))  ;APPNAME ":  #include list 
+		{
+			msgbox, VISIBLE!
+		}
+	}
+	else
+		validImportz := tmpImportz
+
+	tmpImportz := importz :=
 return
 
 
@@ -1925,7 +1961,7 @@ manual_imports:
 	WinGetPos, x, y, WinW, WinH, A
 	x_ebox := x + (WinW - EBOX_W)/2 + EBOX_XOFF
 	y_ebox := y + (WinH - EBOX_H)/2 + EBOX_YOFF	
-	x_btn  := EBOX_W - 170
+	x_btn  := EBOX_W - 190
 	w_edit := EBOX_W - 20
 
 	/*
@@ -1950,29 +1986,40 @@ manual_imports:
 	*/
 	
     if !EditorGuiCreated {
-		;Gui, EditorBox: +Owner1
-		;Gui, 3: Add, Edit, x10 y10 w500 h65 vNT
+		Gui, EditorBox: +Owner1
 		Gui, EditorBox: add, Text, r1 w200, edytuj wpisy ręcznie:
-		Gui, EditorBox: add, Edit, r10 w%w_edit% vEditorBox, % listArray(validImportz) ;% Default
-        Gui, EditorBox: add, Button, w70 x%x_btn% y+15 gEditorBoxOK , OK  ;&OK
-        Gui, EditorBox: add, Button, w70 x+10 gEditorBoxCancel, Cancel  ;&Cancel
+		Gui, EditorBox: add, Edit, -E0x200 -Wrap r10 w%w_edit% vEditorBox, % listArray(validImportz) ;% Default
+        Gui, EditorBox: add, Button, w70 x%x_btn% y+15 gEditorBoxCancel, Anuluj  ;&Cancel
+        Gui, EditorBox: add, Button, w90 x+10 gEditorBoxOK , % ">> Parsuj   " ;&OK
         EditorGuiCreated := true
     }
 	;Gui, EditorBox: Show, x%x_ebox% y%y_ebox% w%EBOX_W% h%EBOX_H%, % APPNAME "<#include list>"
+	GoSub, off_messages
+	Gui, 1: +Disabled
 	Gui, EditorBox: Show,  x%x_ebox% y%y_ebox% w%EBOX_W% h%EBOX_H%,% APPNAME ":  #include list"
 	Send ^{Home}
 	
 	return
 	
 	EditorBoxOK:
+	minput := 1
+	tmpBuffer := scriptBuffer
+	scriptBuffer := EditorBox
+	debug("new buffer >>>>>>>>>> " scriptBuffer, A_LineNumber)
+	GoSub, read_import_links
+	scriptBuffer := tmpBuffer
+	tmpBuffer := minput :=
+
 	Gui, EditorBox: Submit, NoHide
-	MsgBox, 262208, , %NT%
-	Gui, EditorBox: Cancel
+	;Gui, 1: -Disabled
+	;GoSub, on_messages
+	;Gui, EditorBox: Cancel
 	return  
 
 	EditorBoxGuiClose:
     EditorBoxGuiEscape:
     EditorBoxCancel:
+	Gui, 1: -Disabled
     Gui, EditorBox: Cancel
     return	
 	

@@ -3,8 +3,7 @@
 
 po zaladowaniu nowego skryptu watching script przestaje dzialac
 
-enter nie schodzi a okejuje  czemu APPNAME blokuje?? gdzie jest check?
-zablokowac ownera przy edicie
+VISIBLE DWUKROTNIE???
 
 domyslne katalogi przy szukaniu importow sa z dupy (upewnic sie ze default folder jest brany poprawnie)
 
