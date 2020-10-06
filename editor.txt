@@ -1,9 +1,12 @@
 [wylaczylem init cloud z enabling] -- sprawdzic wszystkie case'y, odblokowanie przez trader id
 [zmienilem globalny matching mode z 2 na 3]
 
+
+cursor wait, text wait, disable buttons
+api-start wymagane
+
 po zaladowaniu nowego skryptu watching script przestaje dzialac
 
-VISIBLE DWUKROTNIE???
 
 domyslne katalogi przy szukaniu importow sa z dupy (upewnic sie ze default folder jest brany poprawnie)
 
@@ -30,6 +33,7 @@ ale to default folder dopiero w updacie cloud ??  lub zliczyc wszystkie linki, g
 
 w import, jezeli nie bylo z rejestru poprawnego, ani z heurystyki, daj linka z importów w czerwonej ramce!, nie aktywuj reszty
 
+drag'n'drop na button
 
 przy importach nie skracac, przy relinku/updacie juz tak
 			

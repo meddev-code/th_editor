@@ -1710,8 +1710,10 @@ read_import_links:
 ;jezeli nie ma luzem katalogu ogówlnego sprawdzić autohotkey\czy jakis skrypt istnieje z default 
 
 ;IMPORT LINKS JUZ PRZY SPRAWDZANIU CZY POPRAWNY SKRYPT/PRZESTARZAŁY
-	if (minput)
+	if (minput) {
 		GoSub, manual_input
+		return
+	}
 
 		
 	CloudBtnED04_R := CloudBtnED04_D   ;;0
@@ -1738,7 +1740,7 @@ manual_input:
 		pos := RegExMatch(scriptBuffer, "i`nm)^[[:blank:]]*(;*)[[:blank:]]*\#Include[[:blank:]]+([^;\n\r]+)", OutputVar, pos)
 		if (pos++ <> 0)  ;;spoko, do inkrementacji nie dochodzi gdy false
 		{
-			;debug(" #include " OutputVar2 (OutputVar1 ? " (commented)" : "") )
+			debug(" #include " OutputVar2 (OutputVar1 ? " (commented)" : "") )
 			importz.Push(Trim(OutputVar2))
 			if (OutputVar1)
 				commented[A_Index] := 1
@@ -1749,11 +1751,12 @@ manual_input:
 
 	positions := []
 	defaultDir :=
+	badDir :=
 	expectedAHKs := 
 	commonPaths := {}
 	api_position :=
 		
-	;debug("importz length ? " importz.length(), A_LineNumber)
+	; debug("importz length ? " importz.length(), A_LineNumber)
 	
 	For sfile in DIR_SCRIPTS ;_, 
 	{
@@ -1772,12 +1775,14 @@ manual_input:
 			
 		if (!fext)  ;; sprawdz czy import nie jest domyslnym katalogiem
 		{
-			noext[A_Index] := 1
+			noext[A_Index] := 1  ;;zaznacza czy import pod danym indexem jest ścieżką do katalogu
 			;if (checkScriptsExist(fdir)) 
 			;{
 				;positions[1] := A_Index
 			if (!commented[A_Index] && checkScriptsExist(fdir))
 				defaultDir := fdir
+			else if (!badDir)
+				badDir := fdir
 				;defaultOK := 1
 			;}
 			;else if	(!defaultDir)  ;przypisz i tak, w razie nie znalezienia będzie w czerwonej ramce
@@ -1858,6 +1863,9 @@ manual_input:
 		debug("[> uncommenting api-start.ahk")
 	}
 	
+	debug("defaultDir " defaultDir, A_LineNumber)
+	if (commonPaths)
+	debug("commonPaths " commonPaths[1], A_LineNumber)
 	;jezeli brak katalogu domyslnego, spróbuj wyluskac
 	if (!defaultDir && commonPaths)
 	{
@@ -1889,6 +1897,11 @@ manual_input:
 		tmpImportz.Push("#Include " defaultDir)
 		debug(" #Include " defaultDir)
 		;debug("[> pushing:: 0: " defaultDir)
+	}
+	else if (badDir)
+	{
+		tmpImportz.Push(";#Include " badDir)
+		debug("[#Include " badDir "] commented")
 	}
 	
 	Loop % DIR_SCRIPTS.Count()    ;;sortujemy wymagane skrypty
@@ -1924,7 +1937,7 @@ manual_input:
 	{
 		validPosition .= ";" pointer
 	}
-	
+
 	For _, otherLink in importz    ;;załączamy pozostałe importy
 	{
 	    otherLink := RTrim(otherLink, OmitChars := "\")
@@ -1943,9 +1956,9 @@ manual_input:
 
 	if (minput)
 	{
-		if (EditorGuiCreated && WinExist("ahk_class AutoHotkeyGUI"))  ;APPNAME ":  #include list 
+		if (EditorGuiCreated && WinExist(APPNAME ":  #include list ahk_class AutoHotkeyGUI"))  ;APPNAME ":  #include list 
 		{
-			msgbox, VISIBLE!
+			GuiControl, , EditorBox, % listArray(tmpImportz)
 		}
 	}
 	else
@@ -1961,7 +1974,7 @@ manual_imports:
 	WinGetPos, x, y, WinW, WinH, A
 	x_ebox := x + (WinW - EBOX_W)/2 + EBOX_XOFF
 	y_ebox := y + (WinH - EBOX_H)/2 + EBOX_YOFF	
-	x_btn  := EBOX_W - 190
+	x_btn  := EBOX_W - 190 -20
 	w_edit := EBOX_W - 20
 
 	/*
@@ -1984,17 +1997,18 @@ manual_imports:
 	Gui 1:Default ;niepotrzebne, bo -LastFound --- -LastFound nie działa
 	;Gui, 7:Hide
 	*/
+	GoSub, off_messages
 	
     if !EditorGuiCreated {
 		Gui, EditorBox: +Owner1
 		Gui, EditorBox: add, Text, r1 w200, edytuj wpisy ręcznie:
 		Gui, EditorBox: add, Edit, -E0x200 -Wrap r10 w%w_edit% vEditorBox, % listArray(validImportz) ;% Default
-        Gui, EditorBox: add, Button, w70 x%x_btn% y+15 gEditorBoxCancel, Anuluj  ;&Cancel
-        Gui, EditorBox: add, Button, w90 x+10 gEditorBoxOK , % ">> Parsuj   " ;&OK
+        Gui, EditorBox: add, Button, w90 x%x_btn% y+15 gEditorBoxCancel, Anuluj  ;&Cancel
+        Gui, EditorBox: add, Button, w90 x+10 gEditorBoxOK , % ">>  Parsuj   " ;&OK
         EditorGuiCreated := true
     }
 	;Gui, EditorBox: Show, x%x_ebox% y%y_ebox% w%EBOX_W% h%EBOX_H%, % APPNAME "<#include list>"
-	GoSub, off_messages
+	
 	Gui, 1: +Disabled
 	Gui, EditorBox: Show,  x%x_ebox% y%y_ebox% w%EBOX_W% h%EBOX_H%,% APPNAME ":  #include list"
 	Send ^{Home}
@@ -2004,22 +2018,23 @@ manual_imports:
 	EditorBoxOK:
 	minput := 1
 	tmpBuffer := scriptBuffer
-	scriptBuffer := EditorBox
-	debug("new buffer >>>>>>>>>> " scriptBuffer, A_LineNumber)
+	GuiControlGet, parseStuff,, EditorBox, Text  ;%EditorBox% potrzebuje submit do uzyskania wartości
+	scriptBuffer := parseStuff
 	GoSub, read_import_links
 	scriptBuffer := tmpBuffer
 	tmpBuffer := minput :=
 
-	Gui, EditorBox: Submit, NoHide
-	;Gui, 1: -Disabled
-	;GoSub, on_messages
-	;Gui, EditorBox: Cancel
+	; Gui, EditorBox: Submit, NoHide
+	; Gui, 1: -Disabled
+	; GoSub, on_messages
+	; Gui, EditorBox: Cancel
 	return  
 
 	EditorBoxGuiClose:
     EditorBoxGuiEscape:
     EditorBoxCancel:
 	Gui, 1: -Disabled
+	GoSub, on_messages
     Gui, EditorBox: Cancel
     return	
 	
