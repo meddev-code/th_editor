@@ -1,5 +1,5 @@
 ﻿DetectHiddenWindows, On
-SetTitleMatchMode,  3    ;;;;;po co 2???? zmienione 17.09
+SetTitleMatchMode, 3    ;;;;;po co 2???? zmienione 17.09
 ;;; przy wylaczeniu czy zamknac skrypt?
 
 
@@ -654,7 +654,7 @@ If (WinY)
 
 Gui, Show, %x% %y% w%w% h%h%, %APPNAME%  ;%file_name%
 hWin := WinExist("A")
-GuiControl,,WindowHandle, %thisWindow%
+GuiControl,,WindowHandle, %thisWindow%   ;wtf?
 
 
 SysGet, OutX, 76
@@ -664,7 +664,7 @@ SysGet, OutY2, 79
 OutX2 -= Abs(OutX)
 OutY2 -= Abs(OutY)
 
-WinGetPos, x, y, WinW, WinH, A
+WinGetPos, x, y, WinW, WinH, ahk_id %hWin% ;A
 
 If (x < OutX)
 	x1 := OutX
@@ -676,7 +676,7 @@ If (y >= OutY2 - WinH)
 	y1 := OutY2 - WinH
 
 If (x <> x1 || y <> y1)
-	WinMove, A, , x1, y1
+	WinMove, ahk_id %hWin%, , x1, y1
 
 ;----------------------------------------------win position-----------
 
@@ -707,8 +707,8 @@ Gui 1:Default ;niepotrzebne, bo -LastFound --- -LastFound nie działa
 
 ;-------------------------------------------------------------------
 
-WinActivate, A
-WinRestore, A
+WinActivate, ahk_id %hWin% ;A
+WinRestore, ahk_id %hWin% ;A
 
 
 
@@ -845,6 +845,8 @@ register_script:
 		;GuiControl, Choose, CurrentTab, |1		
 		;RegWrite, REG_SZ, HKEY_CURRENT_USER, Software\TraderHouse\script, Tab, 1
 		file.Close()
+		Gui, EditorBox: Destroy
+		EditorGuiCreated :=
 		GuiControl, Text, ImportScriptBtn, % ImportScriptBtn_D
 		GuiControl, Text, eTRADER_ED01, 
 		;SetTimer, watch_script, Off
@@ -1526,7 +1528,7 @@ return
 ENTER::
 NumpadEnter::
   ;ControlFocus,  ;, ahk_id %lastBtn% ;Button1 ;BTNLOAD
-	ControlGetFocus, enteron, A
+	ControlGetFocus, enteron, ahk_id %hWin% ;A
   debug("ENTER outside <- " enteron, A_LineNumber)
   Send, {TAB}+{TAB}
 	;Send, % (enteron == BTNLOAD ? "{Space}" : "{Enter}")
@@ -1665,7 +1667,7 @@ Return
 
 refresh_range:
   GoSub, repaint_range
-  WinSet, Redraw, , A	
+  WinSet, Redraw, , ahk_id %hWin% ;A	
 Return
 
 export_name:
@@ -1740,7 +1742,7 @@ manual_input:
 		pos := RegExMatch(scriptBuffer, "i`nm)^[[:blank:]]*(;*)[[:blank:]]*\#Include[[:blank:]]+([^;\n\r]+)", OutputVar, pos)
 		if (pos++ <> 0)  ;;spoko, do inkrementacji nie dochodzi gdy false
 		{
-			debug(" #include " OutputVar2 (OutputVar1 ? " (commented)" : "") )
+			;debug(" #include " OutputVar2 (OutputVar1 ? " (commented)" : "") )
 			importz.Push(Trim(OutputVar2))
 			if (OutputVar1)
 				commented[A_Index] := 1
@@ -1751,7 +1753,7 @@ manual_input:
 
 	positions := []
 	defaultDir :=
-	badDir :=
+	badDirIdx :=
 	expectedAHKs := 
 	commonPaths := {}
 	api_position :=
@@ -1767,22 +1769,28 @@ manual_input:
 	{
 
 		fext  := ripPath(importedLink, 3)
-		fdir  := ripPath(importedLink, 2)
+		if (fext)
+			fdir  := ripPath(importedLink, 2)
 		fname := ripPath(importedLink)
 
 		;if (!fext && (commented[A_Index] || defaultOK))
 		;	continue
-			
 		if (!fext)  ;; sprawdz czy import nie jest domyslnym katalogiem
 		{
+			fdir  := importedLink
+			StringRight, LastChar, fdir, 1
+			if (LastChar != "\")
+				fdir := fdir "\" ;StringTrimRight, fdir, fdir, 1  ; Remove the trailing backslash.
+			
 			noext[A_Index] := 1  ;;zaznacza czy import pod danym indexem jest ścieżką do katalogu
 			;if (checkScriptsExist(fdir)) 
 			;{
 				;positions[1] := A_Index
 			if (!commented[A_Index] && checkScriptsExist(fdir))
 				defaultDir := fdir
-			else if (!badDir)
-				badDir := fdir
+			else if (!badDirIdx)
+				badDirIdx := A_Index
+
 				;defaultOK := 1
 			;}
 			;else if	(!defaultDir)  ;przypisz i tak, w razie nie znalezienia będzie w czerwonej ramce
@@ -1863,9 +1871,6 @@ manual_input:
 		debug("[> uncommenting api-start.ahk")
 	}
 	
-	debug("defaultDir " defaultDir, A_LineNumber)
-	if (commonPaths)
-	debug("commonPaths " commonPaths[1], A_LineNumber)
 	;jezeli brak katalogu domyslnego, spróbuj wyluskac
 	if (!defaultDir && commonPaths)
 	{
@@ -1898,10 +1903,10 @@ manual_input:
 		debug(" #Include " defaultDir)
 		;debug("[> pushing:: 0: " defaultDir)
 	}
-	else if (badDir)
+	else if (badDirIdx)
 	{
-		tmpImportz.Push(";#Include " badDir)
-		debug("[#Include " badDir "] commented")
+		tmpImportz.Push((commented[badDirIdx] ? ";" : "") "#Include " importz[badDirIdx])
+		debug((commented[badDirIdx] ? "[" : " ") "#Include " importz[badDirIdx] (commented[badDirIdx] ? "]  commented" : ""))
 	}
 	
 	Loop % DIR_SCRIPTS.Count()    ;;sortujemy wymagane skrypty
@@ -1941,7 +1946,7 @@ manual_input:
 	For _, otherLink in importz    ;;załączamy pozostałe importy
 	{
 	    otherLink := RTrim(otherLink, OmitChars := "\")
-		if (InStr(validPosition, A_Index) || otherLink = defaultDir || (noext[A_Index] && commented[A_Index]))
+		if (InStr(validPosition, A_Index) || otherLink = defaultDir || (noext[A_Index] && commented[A_Index]) || (badDirIdx && badDirIdx = A_Index))
 		   continue
 		 
 		needle := "i)^(" RegExReplace(defaultDir, "(\\)", "\\") ")"
@@ -1954,14 +1959,16 @@ manual_input:
 		debug("[> pushing other: " otherLink (commented[A_Index] ? " (commented)" : ""))
 	}
 
-	if (minput)
-	{
-		if (EditorGuiCreated && WinExist(APPNAME ":  #include list ahk_class AutoHotkeyGUI"))  ;APPNAME ":  #include list 
+	;if (minput)
+	;{
+		if (EditorGuiCreated && WinExist(APPNAME ":  #include list ahk_class AutoHotkeyGUI"))  ; )APPNAME ":  #include list 
 		{
 			GuiControl, , EditorBox, % listArray(tmpImportz)
 		}
-	}
-	else
+	;}
+	;else
+	
+	if (!minput)
 		validImportz := tmpImportz
 
 	tmpImportz := importz :=
@@ -1971,7 +1978,7 @@ return
 manual_imports:
   debug(">manual_imports", A_LineNumber)
 
-	WinGetPos, x, y, WinW, WinH, A
+	WinGetPos, x, y, WinW, WinH, ahk_id %hWin% ;A
 	x_ebox := x + (WinW - EBOX_W)/2 + EBOX_XOFF
 	y_ebox := y + (WinH - EBOX_H)/2 + EBOX_YOFF	
 	x_btn  := EBOX_W - 190 -20
@@ -2003,10 +2010,12 @@ manual_imports:
 		Gui, EditorBox: +Owner1
 		Gui, EditorBox: add, Text, r1 w200, edytuj wpisy ręcznie:
 		Gui, EditorBox: add, Edit, -E0x200 -Wrap r10 w%w_edit% vEditorBox, % listArray(validImportz) ;% Default
-        Gui, EditorBox: add, Button, w90 x%x_btn% y+15 gEditorBoxCancel, Anuluj  ;&Cancel
-        Gui, EditorBox: add, Button, w90 x+10 gEditorBoxOK , % ">>  Parsuj   " ;&OK
+        Gui, EditorBox: add, Button, w90 x%x_btn% y+15 vEditorBoxCancel gEditorBoxCancel, Anuluj  ;&Cancel
+        Gui, EditorBox: add, Button, w90 x+10 vEditorBoxOK gEditorBoxOK , % ">>  Parsuj   " ;&OK
         EditorGuiCreated := true
     }
+	;else
+	;	GuiControl, , EditorBox, % listArray(validImportz)
 	;Gui, EditorBox: Show, x%x_ebox% y%y_ebox% w%EBOX_W% h%EBOX_H%, % APPNAME "<#include list>"
 	
 	Gui, 1: +Disabled
@@ -2015,21 +2024,41 @@ manual_imports:
 	
 	return
 	
+	parsed := 0
+	
 	EditorBoxOK:
-	minput := 1
-	tmpBuffer := scriptBuffer
-	GuiControlGet, parseStuff,, EditorBox, Text  ;%EditorBox% potrzebuje submit do uzyskania wartości
-	scriptBuffer := parseStuff
-	GoSub, read_import_links
-	scriptBuffer := tmpBuffer
-	tmpBuffer := minput :=
-
+	if (!parsed)
+	{
+		minput := 1
+		disable("EditorBoxCancel")
+		disable("EditorBoxOK")
+		tmpBuffer := scriptBuffer
+		GuiControlGet, parseStuff,, EditorBox, Text  ;%EditorBox% potrzebuje submit do uzyskania wartości
+		scriptBuffer := parseStuff
+		GoSub, read_import_links
+		scriptBuffer := tmpBuffer
+		tmpBuffer := minput :=
+		GuiControl,, EditorBoxOK, Zatwierdź
+		enable("EditorBoxCancel")
+		enable("EditorBoxOK")
+		parsed := 1
+	}
+	else
+	{
+		GuiControl,, EditorBoxOK, % ">>  Parsuj   "
+		parsed := 0
+		debug("---------- ide enable Imports_ ---------", A_LineNumber)
+		enableGroup("Imports_")
+		debug("end", A_LineNumber)
+		GoSub, GuiEditorOK
+	}
 	; Gui, EditorBox: Submit, NoHide
 	; Gui, 1: -Disabled
 	; GoSub, on_messages
 	; Gui, EditorBox: Cancel
 	return  
 
+GuiEditorOK:
 	EditorBoxGuiClose:
     EditorBoxGuiEscape:
     EditorBoxCancel:
@@ -3034,7 +3063,7 @@ if RESTART || answer
   editing := 1
   radiobag := 
   
-  WinGet, ActiveControlList, ControlList, A
+  WinGet, ActiveControlList, ControlList, ahk_id %hWin% ;A
   Loop, Parse, ActiveControlList, `n
   {
     GuiControlGet, control, Name, %A_LoopField%
@@ -3223,8 +3252,8 @@ return
 
 
 setTrader(oldVar = "") {
-		global eTRADER_ED01_R, scriptBuffer, full_path, path_only, file_name, file, traderCorrected ;, hWin ;, changes
-		IfWinExist, A ;Editor  ;;wtf, gubi bycie glownym gui
+		global eTRADER_ED01_R, scriptBuffer, full_path, path_only, file_name, file, traderCorrected, hWin ;, changes
+		IfWinExist, ahk_id %hWin% ;A ;Editor  ;;wtf, gubi bycie glownym gui
 		WinGetPos, x, y, w, ;, ahk_id %hWin%;, Editor ;, h czemu Gui:1 nie jest juz default??
 		debug("x = " x " y = " y)
 		Loop {
@@ -3526,14 +3555,24 @@ enableGroup(group_name) {
 }
 
 GUI_visibility(element, action) {
-  WinGet, ActiveControlList, ControlList, A
+  global hWin
+  WinGet, ActiveControlList, ControlList, ahk_id %hWin% ;A
   ;isapiactive := 1
+
+  if (element = "Imports_")
+	debug("}}}}}}}}}}}} " element " {{{{{{{{{{{{{{{")
   Loop, Parse, ActiveControlList, `n
   {
-    
-    GuiControlGet, control, Name, %A_LoopField%
-	if InStr(control, element) = 1
+
+    GuiControlGet, controll, Name, %A_LoopField%
+	if (action = "enable" && element = "Imports_" && InStr(controll, "Imports_") = 1)
 	{
+	  debug(action " > [" element "] " controll)
+	}
+
+	if InStr(controll, element) = 1
+	{
+	/* <---- to odkomentowac!
 		if (action = "enable" && element = "Imports_")
 		{
 		  StringRight, editable, control, 4
@@ -3554,8 +3593,11 @@ GUI_visibility(element, action) {
 		  ;else if (RegExMatch(editable, "SW06") && !isapiactive)
 			;	continue
 		}
-
-		GuiControl, %action%, %control%
+		*/
+		;if (action = "enable")
+			;debug(action " :::: " control, A_LineNumber)
+		
+		GuiControl, %action%, %controll%
     }
   }
 }
@@ -4481,7 +4523,7 @@ printArray(strArray, delimiter:= ", ")
   str := ""
   for i, v in strArray
   {
-	debug("listing " i ": " v)
+	;debug("listing " i ": " v)
     str .= delimiter . v
   }
   return substr(str, StrLen(delimiter)+1)

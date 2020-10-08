@@ -1,8 +1,10 @@
 [wylaczylem init cloud z enabling] -- sprawdzic wszystkie case'y, odblokowanie przez trader id
 [zmienilem globalny matching mode z 2 na 3]
+[zmienilem ,A na ,ahk_id %hWin%]
 
+ni huja grupowe Imports_ nie chodzi
 
-cursor wait, text wait, disable buttons
+disable buttons, ok zastapic + check(ramki), anuluj wek
 api-start wymagane
 
 po zaladowaniu nowego skryptu watching script przestaje dzialac
