@@ -2,9 +2,9 @@
 [zmienilem globalny matching mode z 2 na 3]
 [zmienilem ,A na ,ahk_id %hWin%]
 
-ni huja grupowe Imports_ nie chodzi
+parsestuff nie ma wartosci???  w workin dzialalo po jednym zatwierdzeniu.. submit?
 
-disable buttons, ok zastapic + check(ramki), anuluj wek
+check(ramki), anuluj wek
 api-start wymagane
 
 po zaladowaniu nowego skryptu watching script przestaje dzialac
@@ -225,6 +225,8 @@ przeniesc updown prawo dol, ctrl+shift+alt buttons do qls
 dragndrop
 
 check ramdisk
+
+raczka nad buttonami miga
 
 czy booktabs mozna bez api? rozwazyc zakladke up, updowns orders hide/disable
 

@@ -2009,11 +2009,15 @@ manual_imports:
     if !EditorGuiCreated {
 		Gui, EditorBox: +Owner1
 		Gui, EditorBox: add, Text, r1 w200, edytuj wpisy ręcznie:
-		Gui, EditorBox: add, Edit, -E0x200 -Wrap r10 w%w_edit% vEditorBox, % listArray(validImportz) ;% Default
+		Gui, EditorBox: add, Edit, -E0x200 -Wrap r10 w%w_edit% vEditorBox geditor_change, % listArray(validImportz) ;% Default
         Gui, EditorBox: add, Button, w90 x%x_btn% y+15 vEditorBoxCancel gEditorBoxCancel, Anuluj  ;&Cancel
-        Gui, EditorBox: add, Button, w90 x+10 vEditorBoxOK gEditorBoxOK , % ">>  Parsuj   " ;&OK
+        Gui, EditorBox: add, Button, w90 x+10 vEditorBoxOK gEditorBoxOK , Zatwierdź  ;, % ">>  Parsuj   " ;&OK
         EditorGuiCreated := true
-    }
+		
+		GuiControlGet, parseStuff,, EditorBox, Text
+		
+		parsed := 1
+	}
 	;else
 	;	GuiControl, , EditorBox, % listArray(validImportz)
 	;Gui, EditorBox: Show, x%x_ebox% y%y_ebox% w%EBOX_W% h%EBOX_H%, % APPNAME "<#include list>"
@@ -2021,11 +2025,8 @@ manual_imports:
 	Gui, 1: +Disabled
 	Gui, EditorBox: Show,  x%x_ebox% y%y_ebox% w%EBOX_W% h%EBOX_H%,% APPNAME ":  #include list"
 	Send ^{Home}
-	
 	return
-	
-	parsed := 0
-	
+
 	EditorBoxOK:
 	if (!parsed)
 	{
@@ -2033,8 +2034,8 @@ manual_imports:
 		disable("EditorBoxCancel")
 		disable("EditorBoxOK")
 		tmpBuffer := scriptBuffer
-		GuiControlGet, parseStuff,, EditorBox, Text  ;%EditorBox% potrzebuje submit do uzyskania wartości
-		scriptBuffer := parseStuff
+		;GuiControlGet, parseStuff,, EditorBox, Text  ;%EditorBox% potrzebuje submit do uzyskania wartości
+		scriptBuffer := changedStuff ;parseStuff
 		GoSub, read_import_links
 		scriptBuffer := tmpBuffer
 		tmpBuffer := minput :=
@@ -2045,17 +2046,14 @@ manual_imports:
 	}
 	else
 	{
-		GuiControl,, EditorBoxOK, % ">>  Parsuj   "
-		parsed := 0
-		debug("---------- ide enable Imports_ ---------", A_LineNumber)
+		;GuiControl,, EditorBoxOK, % ">>  Parsuj   "
+		;parsed := 0
+		Gui, 1:Default
 		enableGroup("Imports_")
-		debug("end", A_LineNumber)
+		parseStuff := changedStuff
 		GoSub, GuiEditorOK
 	}
-	; Gui, EditorBox: Submit, NoHide
-	; Gui, 1: -Disabled
-	; GoSub, on_messages
-	; Gui, EditorBox: Cancel
+
 	return  
 
 GuiEditorOK:
@@ -2065,6 +2063,7 @@ GuiEditorOK:
 	Gui, 1: -Disabled
 	GoSub, on_messages
     Gui, EditorBox: Cancel
+	
     return	
 	
 
@@ -2094,6 +2093,22 @@ Return
 
 return
 
+editor_change:
+	debug(">editor_change", A_LineNumber)
+	GuiControlGet, changedStuff,, EditorBox, Text
+	if (changedStuff != parseStuff)
+	{
+		debug("> > changed ? true")
+		GuiControl,, EditorBoxOK, % ">>  Parsuj   "
+		parsed := 0
+	}
+	else
+	{
+		debug("> > changed ? false")
+		GuiControl,, EditorBoxOK, Zatwierdź
+		parsed := 1
+	}
+return
 
 read_defaults:
   debug(">read_defaults", A_LineNumber)
@@ -3559,20 +3574,17 @@ GUI_visibility(element, action) {
   WinGet, ActiveControlList, ControlList, ahk_id %hWin% ;A
   ;isapiactive := 1
 
-  if (element = "Imports_")
-	debug("}}}}}}}}}}}} " element " {{{{{{{{{{{{{{{")
   Loop, Parse, ActiveControlList, `n
   {
 
     GuiControlGet, controll, Name, %A_LoopField%
-	if (action = "enable" && element = "Imports_" && InStr(controll, "Imports_") = 1)
-	{
-	  debug(action " > [" element "] " controll)
-	}
+	; if (action = "enable" && element = "Imports_" && InStr(controll, "Imports_") = 1)
+	; {
+	  ; debug(action " > [" element "] " controll)
+	; }
 
 	if InStr(controll, element) = 1
 	{
-	/* <---- to odkomentowac!
 		if (action = "enable" && element = "Imports_")
 		{
 		  StringRight, editable, control, 4
@@ -3593,7 +3605,6 @@ GUI_visibility(element, action) {
 		  ;else if (RegExMatch(editable, "SW06") && !isapiactive)
 			;	continue
 		}
-		*/
 		;if (action = "enable")
 			;debug(action " :::: " control, A_LineNumber)
 		
