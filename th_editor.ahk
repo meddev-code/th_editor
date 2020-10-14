@@ -1716,8 +1716,7 @@ read_import_links:
 		GoSub, manual_input
 		return
 	}
-
-		
+	
 	CloudBtnED04_R := CloudBtnED04_D   ;;0
 			
 	Imports_apiED05_R := Imports_apiED05_D  ;;importy
@@ -1730,7 +1729,14 @@ read_import_links:
 	Imports_chartSW07_R := Imports_chartSW07_D
 	Imports_symSW08_R := Imports_symSW08_D  
 	
-	CHK_IMPORTS := ["Imports_bookSW06_R", "Imports_chartSW07_R", "Imports_symSW08_R"] ;;switche
+	if (mconfirm) {
+		GoSub, manual_confirm
+		return
+	}
+	
+	;CHK_IMPORTS := ["Imports_bookSW06_R", "Imports_chartSW07_R", "Imports_symSW08_R"] ;;switche
+	
+	;ciekawe: skrypt daje sam z siebie priorytet na odkomentowane, tak jak mialoby byc
 	
 manual_input:
 	;pos := RegExMatch(scriptBuffer, "im`nJO)^\s*;*\s*#Include\s+([^;\n]*)", OutputVar)  
@@ -1818,25 +1824,25 @@ manual_input:
 			positions[scriptIdx] := A_Index
 
 			;update paths
-			if (!minput)
-			try {
-				ictrl := BTN_IMPORTS[scriptIdx]
-				%ictrl%_R := importedLink
-				%ictrl%_sR := buttonPath(importedLink)
-			}
+;			if (!minput)
+;			try {
+;				ictrl := BTN_IMPORTS[scriptIdx]
+;				%ictrl%_R := importedLink
+;				%ictrl%_sR := buttonPath(importedLink)
+;			}
 			
 			;potrzebne by upewnic sie ze jest odkomentowane
 			if (scriptIdx == 1)
 				api_position := A_Index
-			else
+;			else
 			;import checkbox
-			{ 
-				if (!minput)
-				try {
-					chkbox := CHK_IMPORTS[scriptIdx-1]
-					%chkbox% := !commented[A_Index]
-				}
-			}
+;			{ 
+;				if (!minput)
+;				try {
+;					chkbox := CHK_IMPORTS[scriptIdx-1]
+;					%chkbox% := !commented[A_Index]
+;				}
+;			}
 			
 			;zliczaj najpopularniejsze sciezki (wskażą domyślny katalog w razie potrzeby)
 			if (!defaultDir && RegExMatch(importedLink, "i)^[A-Z]:\\"))
@@ -1893,17 +1899,21 @@ manual_input:
 	if (!minput)
 		validImportz := []
 	
+manual_confirm:	
 	if (defaultDir)
 	{
 		if (!minput) {
 			CloudBtnED04_R := defaultDir
 			CloudBtnED04_sR := buttonPath(defaultDir)
 		}
-		tmpImportz.Push("#Include " defaultDir)
-		debug(" #Include " defaultDir)
-		;debug("[> pushing:: 0: " defaultDir)
+		else if (!mconfirm)
+		{
+			tmpImportz.Push("#Include " defaultDir)
+			debug(" #Include " defaultDir)
+			;debug("[> pushing:: 0: " defaultDir)
+		}
 	}
-	else if (badDirIdx)
+	else if (badDirIdx && !mconfirm)
 	{
 		tmpImportz.Push((commented[badDirIdx] ? ";" : "") "#Include " importz[badDirIdx])
 		debug((commented[badDirIdx] ? "[" : " ") "#Include " importz[badDirIdx] (commented[badDirIdx] ? "]  commented" : ""))
@@ -1912,29 +1922,54 @@ manual_input:
 	Loop % DIR_SCRIPTS.Count()    ;;sortujemy wymagane skrypty
 	{
 	  ;idx := A_Index + 1
-	  if (positions[A_Index])
+	  if (!minput)
 	  {
-		pushPath := importz[positions[A_Index]]
-		cutted := StrSplit(expectedAHKs,";")[A_Index+1]
-		if (defaultDir && pushPath = defaultDir cutted)
-		{
-			;; obcinamy full link, jezeli jest w domyślnej ścieżce
-			importz[positions[A_Index]] := cutted
-			if (!minput) {
-				ictrl := BTN_IMPORTS[A_Index]
-				%ictrl%_R := cutted
-				%ictrl%_sR := cutted
+		  if (positions[A_Index])
+		  {
+			pushPath := importz[positions[A_Index]]
+			cutted := StrSplit(expectedAHKs,";")[A_Index+1]
+			ictrl := BTN_IMPORTS[A_Index]
+			
+			if (defaultDir && pushPath = defaultDir cutted)
+			{
+				;; obcinamy full link, jezeli jest w domyślnej ścieżce
+				if (!mconfirm)
+					importz[positions[A_Index]] := cutted
+				if (!minput) {
+					%ictrl%_R := cutted
+					%ictrl%_sR := cutted
+				}
 			}
-
+			else
+			{
+				%ictrl%_R := pushPath
+				%ictrl%_sR := buttonPath(pushPath)			
+			}
+			
+			if (A_Index > 1)  ;api-start.ahk pomijamy
+			{
+				chkbox := regexReplace(ictrl, "ED", "SW")
 		
+				;chkbox := CHK_IMPORTS[A_Index]
+				btnc := %chkbox%_R
+				;debug("checkbox::" btnc "  checked ? " !commented[positions[A_Index]], A_LineNumber)
+				%chkbox%_R := !commented[positions[A_Index]]	
+			}
 		}
+	  }
+	  if (!mconfirm)
+	  {
 		tmpImportz.Push((commented[positions[A_Index]] ? ";" : "") "#Include " importz[positions[A_Index]])
 		debug((commented[positions[A_Index]] ? "[" : " ") "#Include " importz[positions[A_Index]] (commented[positions[A_Index]] ? "]  commented" : ""))
 		;debug("[> pushing:: " A_Index ": " importz[positions[A_Index]] (commented[positions[A_Index]] ? " (commented)" : ""))
 	  }
 	}
 	
-	
+	if (mconfirm)
+	{
+		importz :=
+		return
+	}
 	;validImportz.Push("")
 	validPosition :=
 
@@ -1961,66 +1996,68 @@ manual_input:
 
 	;if (minput)
 	;{
-		if (EditorGuiCreated && WinExist(APPNAME ":  #include list ahk_class AutoHotkeyGUI"))  ; )APPNAME ":  #include list 
-		{
-			GuiControl, , EditorBox, % listArray(tmpImportz)
-		}
+	;	if (EditorGuiCreated && WinExist(APPNAME ":  #include list ahk_class AutoHotkeyGUI"))  ; )APPNAME ":  #include list 
+	;	{
+	;		parseStuff := listArray(tmpImportz)
+	;		GuiControl, , EditorBox, % parseStuff
+	;	}
 	;}
 	;else
 	
-	if (!minput)
+	if (minput)
+		parseStuff := listArray(tmpImportz)
+	else 
+	{
 		validImportz := tmpImportz
+		importz :=
+	}
 
-	tmpImportz := importz :=
+	tmpImportz := 
+
+	return	
+	/*
+manual_confirm:
+
+	entries := 1
+	extm := ripPath(validImportz[1], 3)
+	if (extm)
+	{
+		entries++
+		
+	}
+	
+	
+	validImportz[1]
+	{
+		if A_Index = 1
+		extm := ripPath(importedLink, 3)
+		
+		if entries = 4
+	}
+	*/
 return
 
 
 manual_imports:
   debug(">manual_imports", A_LineNumber)
 
-	WinGetPos, x, y, WinW, WinH, ahk_id %hWin% ;A
-	x_ebox := x + (WinW - EBOX_W)/2 + EBOX_XOFF
-	y_ebox := y + (WinH - EBOX_H)/2 + EBOX_YOFF	
-	x_btn  := EBOX_W - 190 -20
-	w_edit := EBOX_W - 20
-
-	/*
-
-	Gui, 7:-LastFound +Owner1 -Caption +ToolWindow   ;+AlwaysOnTop
-	trans := 1
-	if (SHOWLAYER)
-	{
-		CustomColor = EEAA99  ; Can be any RGB color.
-		Gui, 7: Color, %CustomColor%
-		trans := 150
-	}
-	;WinSet, TransColor, %CustomColor% 250 ; Make color invisible
-	WinSet, Transparent, % trans
-	x_layer := x + LAYER_XOFF
-	y_layer := y + LAYER_YOFF
-	Gui, 7:Show, x%x_layer% y%y_layer% w%LAYER_W% h%LAYER_H% NoActivate, tablayer
-	Gui, 7:Hide
-	OnMessage(0x201,"WM_LAYERCLICK") 
-	Gui 1:Default ;niepotrzebne, bo -LastFound --- -LastFound nie działa
-	;Gui, 7:Hide
-	*/
 	GoSub, off_messages
 	
     if !EditorGuiCreated {
+		WinGetPos, x, y, WinW, WinH, ahk_id %hWin% ;A
+		x_ebox := x + (WinW - EBOX_W)/2 + EBOX_XOFF
+		y_ebox := y + (WinH - EBOX_H)/2 + EBOX_YOFF	
+		x_btn  := EBOX_W - 190 -20
+		w_edit := EBOX_W - 20
 		Gui, EditorBox: +Owner1
 		Gui, EditorBox: add, Text, r1 w200, edytuj wpisy ręcznie:
-		Gui, EditorBox: add, Edit, -E0x200 -Wrap r10 w%w_edit% vEditorBox geditor_change, % listArray(validImportz) ;% Default
+		parseStuff := listArray(validImportz)
+		Gui, EditorBox: add, Edit, -E0x200 -Wrap r10 w%w_edit% vEditorBox geditor_change, % parseStuff ;% Default
         Gui, EditorBox: add, Button, w90 x%x_btn% y+15 vEditorBoxCancel gEditorBoxCancel, Anuluj  ;&Cancel
         Gui, EditorBox: add, Button, w90 x+10 vEditorBoxOK gEditorBoxOK , Zatwierdź  ;, % ">>  Parsuj   " ;&OK
         EditorGuiCreated := true
-		
-		GuiControlGet, parseStuff,, EditorBox, Text
-		
 		parsed := 1
 	}
-	;else
-	;	GuiControl, , EditorBox, % listArray(validImportz)
-	;Gui, EditorBox: Show, x%x_ebox% y%y_ebox% w%EBOX_W% h%EBOX_H%, % APPNAME "<#include list>"
 	
 	Gui, 1: +Disabled
 	Gui, EditorBox: Show,  x%x_ebox% y%y_ebox% w%EBOX_W% h%EBOX_H%,% APPNAME ":  #include list"
@@ -2034,9 +2071,9 @@ manual_imports:
 		disable("EditorBoxCancel")
 		disable("EditorBoxOK")
 		tmpBuffer := scriptBuffer
-		;GuiControlGet, parseStuff,, EditorBox, Text  ;%EditorBox% potrzebuje submit do uzyskania wartości
 		scriptBuffer := changedStuff ;parseStuff
 		GoSub, read_import_links
+		GuiControl, , EditorBox, % parseStuff ;;parseStuff changed in read_import_links
 		scriptBuffer := tmpBuffer
 		tmpBuffer := minput :=
 		GuiControl,, EditorBoxOK, Zatwierdź
@@ -2048,8 +2085,13 @@ manual_imports:
 	{
 		;GuiControl,, EditorBoxOK, % ">>  Parsuj   "
 		;parsed := 0
+		mconfirm := 1
+		GoSub, read_import_links
+		mconfirm := 
+		;GoSub, ahk_update
+		
 		Gui, 1:Default
-		enableGroup("Imports_")
+		;enableGroup("Imports_")
 		parseStuff := changedStuff
 		GoSub, GuiEditorOK
 	}
@@ -2090,21 +2132,22 @@ Return
 
 	;MsgBox % EditorBox("Edytuj wpisy ręcznie:", "", APPNAME ": #include list")
   
-
 return
 
 editor_change:
 	debug(">editor_change", A_LineNumber)
-	GuiControlGet, changedStuff,, EditorBox, Text
+	GuiControlGet, changedStuff,, EditorBox, Text  ;;tu ok
 	if (changedStuff != parseStuff)
 	{
-		debug("> > changed ? true")
+		;debug("> > changed ? true")
 		GuiControl,, EditorBoxOK, % ">>  Parsuj   "
+		;msgbox % "parsed:" parseStuff
+		;msgbox % "changed:" changedStuff
 		parsed := 0
 	}
 	else
 	{
-		debug("> > changed ? false")
+		;debug("> > changed ? false")
 		GuiControl,, EditorBoxOK, Zatwierdź
 		parsed := 1
 	}

@@ -1,8 +1,10 @@
 [wylaczylem init cloud z enabling] -- sprawdzic wszystkie case'y, odblokowanie przez trader id
 [zmienilem globalny matching mode z 2 na 3]
 [zmienilem ,A na ,ahk_id %hWin%]
+[1926 !minput dobrze?]
 
-parsestuff nie ma wartosci???  w workin dzialalo po jednym zatwierdzeniu.. submit?
+update import buttons, recznie --> uwzglednic do reset
+
 
 check(ramki), anuluj wek
 api-start wymagane
