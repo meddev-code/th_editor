@@ -3,6 +3,8 @@
 [zmienilem ,A na ,ahk_id %hWin%]
 [1926 !minput dobrze?]
 
+nie wrzuca juz sciezek???
+uncheck wszystko poza checkapi(?)
 update import buttons, recznie --> uwzglednic do reset
 
 

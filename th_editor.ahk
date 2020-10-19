@@ -1716,6 +1716,7 @@ read_import_links:
 		GoSub, manual_input
 		return
 	}
+
 	
 	CloudBtnED04_R := CloudBtnED04_D   ;;0
 			
@@ -1729,10 +1730,11 @@ read_import_links:
 	Imports_chartSW07_R := Imports_chartSW07_D
 	Imports_symSW08_R := Imports_symSW08_D  
 	
+	
 	if (mconfirm) {
 		GoSub, manual_confirm
 		return
-	}
+	}	
 	
 	;CHK_IMPORTS := ["Imports_bookSW06_R", "Imports_chartSW07_R", "Imports_symSW08_R"] ;;switche
 	
@@ -1749,7 +1751,7 @@ manual_input:
 		if (pos++ <> 0)  ;;spoko, do inkrementacji nie dochodzi gdy false
 		{
 			;debug(" #include " OutputVar2 (OutputVar1 ? " (commented)" : "") )
-			importz.Push(Trim(OutputVar2))
+			importz.Push(parsePath(OutputVar2))
 			if (OutputVar1)
 				commented[A_Index] := 1
 		}
@@ -1781,12 +1783,10 @@ manual_input:
 
 		;if (!fext && (commented[A_Index] || defaultOK))
 		;	continue
+				
 		if (!fext)  ;; sprawdz czy import nie jest domyslnym katalogiem
 		{
-			fdir  := importedLink
-			StringRight, LastChar, fdir, 1
-			if (LastChar != "\")
-				fdir := fdir "\" ;StringTrimRight, fdir, fdir, 1  ; Remove the trailing backslash.
+			fdir  := dirSlash(importedLink)
 			
 			noext[A_Index] := 1  ;;zaznacza czy import pod danym indexem jest ścieżką do katalogu
 			;if (checkScriptsExist(fdir)) 
@@ -1913,23 +1913,28 @@ manual_confirm:
 			;debug("[> pushing:: 0: " defaultDir)
 		}
 	}
-	else if (badDirIdx && !mconfirm)
+	else if (badDirIdx) ;&& !mconfirm)
 	{
-		tmpImportz.Push((commented[badDirIdx] ? ";" : "") "#Include " importz[badDirIdx])
-		debug((commented[badDirIdx] ? "[" : " ") "#Include " importz[badDirIdx] (commented[badDirIdx] ? "]  commented" : ""))
+		if (!minput) {
+			CloudBtnED04_R := dirSlash(importz[badDirIdx])
+			CloudBtnED04_sR := buttonPath(dirSlash(importz[badDirIdx]))
+		}
+		else if (!mconfirm)
+		{
+			tmpImportz.Push((commented[badDirIdx] ? ";" : "") "#Include " dirSlash(importz[badDirIdx]))
+			debug((commented[badDirIdx] ? "[" : " ") "#Include " dirSlash(importz[badDirIdx]) (commented[badDirIdx] ? "]  commented" : ""))
+		}
 	}
 	
 	Loop % DIR_SCRIPTS.Count()    ;;sortujemy wymagane skrypty
 	{
 	  ;idx := A_Index + 1
-	  if (!minput)
-	  {
-		  if (positions[A_Index])
-		  {
+		if (!minput && positions[A_Index])
+		{
 			pushPath := importz[positions[A_Index]]
 			cutted := StrSplit(expectedAHKs,";")[A_Index+1]
 			ictrl := BTN_IMPORTS[A_Index]
-			
+
 			if (defaultDir && pushPath = defaultDir cutted)
 			{
 				;; obcinamy full link, jezeli jest w domyślnej ścieżce
@@ -1945,24 +1950,23 @@ manual_confirm:
 				%ictrl%_R := pushPath
 				%ictrl%_sR := buttonPath(pushPath)			
 			}
-			
+
 			if (A_Index > 1)  ;api-start.ahk pomijamy
 			{
 				chkbox := regexReplace(ictrl, "ED", "SW")
-		
+
 				;chkbox := CHK_IMPORTS[A_Index]
 				btnc := %chkbox%_R
 				;debug("checkbox::" btnc "  checked ? " !commented[positions[A_Index]], A_LineNumber)
 				%chkbox%_R := !commented[positions[A_Index]]	
 			}
 		}
-	  }
-	  if (!mconfirm)
-	  {
-		tmpImportz.Push((commented[positions[A_Index]] ? ";" : "") "#Include " importz[positions[A_Index]])
-		debug((commented[positions[A_Index]] ? "[" : " ") "#Include " importz[positions[A_Index]] (commented[positions[A_Index]] ? "]  commented" : ""))
-		;debug("[> pushing:: " A_Index ": " importz[positions[A_Index]] (commented[positions[A_Index]] ? " (commented)" : ""))
-	  }
+		if (!mconfirm && positions[A_Index])
+		{
+			tmpImportz.Push((commented[positions[A_Index]] ? ";" : "") "#Include " importz[positions[A_Index]])
+			debug((commented[positions[A_Index]] ? "[" : " ") "#Include " importz[positions[A_Index]] (commented[positions[A_Index]] ? "]  commented" : ""))
+			;debug("[> pushing:: " A_Index ": " importz[positions[A_Index]] (commented[positions[A_Index]] ? " (commented)" : ""))
+		}
 	}
 	
 	if (mconfirm)
@@ -2088,9 +2092,11 @@ manual_imports:
 		mconfirm := 1
 		GoSub, read_import_links
 		mconfirm := 
+
+		Gui, 1:Default
+		GoSub, manual_cloud_check
 		;GoSub, ahk_update
 		
-		Gui, 1:Default
 		;enableGroup("Imports_")
 		parseStuff := changedStuff
 		GoSub, GuiEditorOK
@@ -2404,15 +2410,15 @@ relink_cloud_folder:
   RegRead, qpath, HKEY_CURRENT_USER, Software\TraderHouse\script, Qsync
   if !InStr(FileExist(qpath), "D")  
   {
-    For each, path in cloudpath ; Loop, %PPRO%
-    {
-       if InStr(FileExist(qpath := vUserProfile "\" path), "D") {
-          if InStr(FileExist(qpath "\Programy\AutoHotKey"), "D") {
-            qpath := qpath "\Programy\AutoHotKey"
+	For each, path in cloudpath ; Loop, %PPRO%
+	{
+	   if InStr(FileExist(qpath := vUserProfile "\" path), "D") {
+		  if InStr(FileExist(qpath "\Programy\AutoHotKey"), "D") {
+			qpath := qpath "\Programy\AutoHotKey"
 			break
-          }
-       }
-    }
+		  }
+	   }
+	}
   }
   if !InStr(FileExist(qpath), "D")  ; nie wykryto qsync, sprawdz pierwszy import ze skryptu
   {
@@ -2616,6 +2622,34 @@ ahk_update:
   ;AHK_UPDATED := 1
   
   updating := 0
+Return
+
+
+manual_cloud_check:
+  debug("manual_cloud_check", A_LineNumber)
+
+  debug("CloudBtnED04_R ::::: " CloudBtnED04_R)
+  debug("CloudBtnED04_sR ::::: " CloudBtnED04_sR)
+    CloudBtnED04_L := CloudBtnED04_R
+    CloudBtnED04_sL := CloudBtnED04_sR
+	CloudBtnED04_I :=
+    GuiControl, Text, CloudBtnED04, %CloudBtnED04_sR%
+		
+	if (CloudBtnED04_R = CloudBtnED04_D)
+	{
+		GuiControl, Show, Yellow_CloudBtnED04
+	}
+    else if !checkScriptsExist(CloudBtnED04_R)
+    {
+        ;GuiControl, Show, Red_CloudBtnED04
+		CloudBtnED04_I := badEntry("CloudBtnED04", checkScriptsExist(CloudBtnED04_R))			
+    }
+	else
+
+    enableGroup("Imports_") 
+    change(04, changes, CloudBtnED04_D != CloudBtnED04_R)
+
+    GoSub, ahk_update
 Return
 
 
@@ -2919,8 +2953,20 @@ directoryPop(path, count := 1)
 
 ripPath(InputVar, mod := 1) ; 1 name, 2 dir, 3 ext, 4 noext, 5 drive
 {
+	;InputVar := RegExReplace(InputVar, "(\\{2,})", "\")
 	SplitPath, InputVar, out1, out2, out3, out4, out5
 	return out%mod%
+}
+
+parsePath(InputVar)
+{
+	return Trim(RegExReplace(InputVar, "(\\{2,})", "\"))
+}
+
+dirSlash(InputVar)
+{
+	StringRight, LastChar, InputVar, 1
+	return InputVar . (LastChar != "\" ? "\" : "")
 }
 	
 askCloudUpdate()
