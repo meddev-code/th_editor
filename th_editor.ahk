@@ -1704,7 +1704,7 @@ Return
 
 
 read_import_links:
-  debug(">read_import_links", A_LineNumber)
+  debug(">read_import_links " (manual_confirming ? "--> confirming" : (manual_parsing ? "--> parsing" : "")), A_LineNumber)
   
   ;CloudBtnED04_R := CloudBtnED04_D 
 	;importy
@@ -1712,7 +1712,7 @@ read_import_links:
 ;jezeli nie ma luzem katalogu ogówlnego sprawdzić autohotkey\czy jakis skrypt istnieje z default 
 
 ;IMPORT LINKS JUZ PRZY SPRAWDZANIU CZY POPRAWNY SKRYPT/PRZESTARZAŁY
-	if (minput) {
+	if (manual_parsing) {
 		GoSub, manual_input
 		return
 	}
@@ -1731,7 +1731,7 @@ read_import_links:
 	Imports_symSW08_R := Imports_symSW08_D  
 	
 	
-	if (mconfirm) {
+	if (manual_confirming) {
 		GoSub, manual_confirm
 		return
 	}	
@@ -1824,7 +1824,7 @@ manual_input:
 			positions[scriptIdx] := A_Index
 
 			;update paths
-;			if (!minput)
+;			if (!manual_parsing)
 ;			try {
 ;				ictrl := BTN_IMPORTS[scriptIdx]
 ;				%ictrl%_R := importedLink
@@ -1837,7 +1837,7 @@ manual_input:
 ;			else
 			;import checkbox
 ;			{ 
-;				if (!minput)
+;				if (!manual_parsing)
 ;				try {
 ;					chkbox := CHK_IMPORTS[scriptIdx-1]
 ;					%chkbox% := !commented[A_Index]
@@ -1896,72 +1896,97 @@ manual_input:
 	}
 
 	tmpImportz := []
-	if (!minput)
+	if (!manual_parsing)
 		validImportz := []
 	
 manual_confirm:	
 	if (defaultDir)
 	{
-		if (!minput) {
+		if (!manual_parsing) {
 			CloudBtnED04_R := defaultDir
 			CloudBtnED04_sR := buttonPath(defaultDir)
 		}
-		else if (!mconfirm)
+		if (!manual_confirming)
 		{
 			tmpImportz.Push("#Include " defaultDir)
 			debug(" #Include " defaultDir)
-			;debug("[> pushing:: 0: " defaultDir)
+			;debug("[> pushing def::: " defaultDir)
 		}
 	}
-	else if (badDirIdx) ;&& !mconfirm)
+	else if (badDirIdx) ;&& !manual_confirming)
 	{
-		if (!minput) {
-			CloudBtnED04_R := dirSlash(importz[badDirIdx])
-			CloudBtnED04_sR := buttonPath(dirSlash(importz[badDirIdx]))
+		tmpDir := dirSlash(importz[badDirIdx])
+		if (!manual_parsing && !commented[badDirIdx]) {
+			CloudBtnED04_R := tmpDir
+			CloudBtnED04_sR := buttonPath(tmpDir)
 		}
-		else if (!mconfirm)
+		if (!manual_confirming)
 		{
-			tmpImportz.Push((commented[badDirIdx] ? ";" : "") "#Include " dirSlash(importz[badDirIdx]))
-			debug((commented[badDirIdx] ? "[" : " ") "#Include " dirSlash(importz[badDirIdx]) (commented[badDirIdx] ? "]  commented" : ""))
+			if (checkScriptsExist(tmpDir))
+				commented[badDirIdx] := 0
+			tmpImportz.Push((commented[badDirIdx] ? ";" : "") "#Include " tmpDir)
+			debug((commented[badDirIdx] ? "[" : " ") "#Include " tmpDir (commented[badDirIdx] ? "]  commented" : ""))
 		}
 	}
 	
 	Loop % DIR_SCRIPTS.Count()    ;;sortujemy wymagane skrypty
 	{
 	  ;idx := A_Index + 1
-		if (!minput && positions[A_Index])
+		if (!manual_parsing)
 		{
-			pushPath := importz[positions[A_Index]]
-			cutted := StrSplit(expectedAHKs,";")[A_Index+1]
 			ictrl := BTN_IMPORTS[A_Index]
-
-			if (defaultDir && pushPath = defaultDir cutted)
+			
+			if (positions[A_Index])
 			{
-				;; obcinamy full link, jezeli jest w domyślnej ścieżce
-				if (!mconfirm)
-					importz[positions[A_Index]] := cutted
-				if (!minput) {
-					%ictrl%_R := cutted
-					%ictrl%_sR := cutted
+				pushPath := importz[positions[A_Index]]
+				cutted := StrSplit(expectedAHKs,";")[A_Index+1]
+
+				if (defaultDir && pushPath = defaultDir cutted)
+				{
+					;; obcinamy full link, jezeli jest w domyślnej ścieżce
+					if (!manual_confirming)
+						importz[positions[A_Index]] := cutted
+					if (!manual_parsing) {
+						%ictrl%_R := cutted
+						%ictrl%_sR := cutted
+					}
+				}
+				else
+				{
+					%ictrl%_R := pushPath
+					%ictrl%_sR := buttonPath(pushPath)			
+				}
+
+				if (A_Index > 1)  ;api-start.ahk pomijamy
+				{
+					chkbox := regexReplace(ictrl, "ED", "SW")
+
+					;chkbox := CHK_IMPORTS[A_Index]
+					;btnc := %chkbox%_R
+					;debug("checkbox::" btnc "  checked ? " !commented[positions[A_Index]], A_LineNumber)
+					%chkbox%_R := !commented[positions[A_Index]]	
+					debug("switching ::: " chkbox " to " %chkbox%_R, A_LineNumber)
+					GuiControl, , %chkbox%, % %chkbox%_R
 				}
 			}
-			else
-			{
-				%ictrl%_R := pushPath
-				%ictrl%_sR := buttonPath(pushPath)			
-			}
-
-			if (A_Index > 1)  ;api-start.ahk pomijamy
+			else if (A_Index > 1)
 			{
 				chkbox := regexReplace(ictrl, "ED", "SW")
 
 				;chkbox := CHK_IMPORTS[A_Index]
-				btnc := %chkbox%_R
+				;btnc := %chkbox%_R
 				;debug("checkbox::" btnc "  checked ? " !commented[positions[A_Index]], A_LineNumber)
 				%chkbox%_R := !commented[positions[A_Index]]	
+				debug("switching off ::: " chkbox, A_LineNumber)
+				GuiControl, , %chkbox%, 0
+			
+				; GuiControlGet, enabled, Enabled, %ctrl%
+				; StringRight, ctrlnr, ctrl, 2
+
+				; GuiControlGet, ischecked ,, % regexReplace(ctrl, "ED", "SW")
 			}
 		}
-		if (!mconfirm && positions[A_Index])
+		if (!manual_confirming && positions[A_Index])
 		{
 			tmpImportz.Push((commented[positions[A_Index]] ? ";" : "") "#Include " importz[positions[A_Index]])
 			debug((commented[positions[A_Index]] ? "[" : " ") "#Include " importz[positions[A_Index]] (commented[positions[A_Index]] ? "]  commented" : ""))
@@ -1969,7 +1994,7 @@ manual_confirm:
 		}
 	}
 	
-	if (mconfirm)
+	if (manual_confirming)
 	{
 		importz :=
 		return
@@ -1985,7 +2010,7 @@ manual_confirm:
 	For _, otherLink in importz    ;;załączamy pozostałe importy
 	{
 	    otherLink := RTrim(otherLink, OmitChars := "\")
-		if (InStr(validPosition, A_Index) || otherLink = defaultDir || (noext[A_Index] && commented[A_Index]) || (badDirIdx && badDirIdx = A_Index))
+		if (InStr(validPosition, A_Index) || InStr(defaultDir, otherLink) || (noext[A_Index] && commented[A_Index]) || (badDirIdx && badDirIdx = A_Index))
 		   continue
 		 
 		needle := "i)^(" RegExReplace(defaultDir, "(\\)", "\\") ")"
@@ -1998,7 +2023,7 @@ manual_confirm:
 		debug("[> pushing other: " otherLink (commented[A_Index] ? " (commented)" : ""))
 	}
 
-	;if (minput)
+	;if (manual_parsing)
 	;{
 	;	if (EditorGuiCreated && WinExist(APPNAME ":  #include list ahk_class AutoHotkeyGUI"))  ; )APPNAME ":  #include list 
 	;	{
@@ -2008,7 +2033,7 @@ manual_confirm:
 	;}
 	;else
 	
-	if (minput)
+	if (manual_parsing)
 		parseStuff := listArray(tmpImportz)
 	else 
 	{
@@ -2071,7 +2096,7 @@ manual_imports:
 	EditorBoxOK:
 	if (!parsed)
 	{
-		minput := 1
+		manual_parsing := 1
 		disable("EditorBoxCancel")
 		disable("EditorBoxOK")
 		tmpBuffer := scriptBuffer
@@ -2079,7 +2104,8 @@ manual_imports:
 		GoSub, read_import_links
 		GuiControl, , EditorBox, % parseStuff ;;parseStuff changed in read_import_links
 		scriptBuffer := tmpBuffer
-		tmpBuffer := minput :=
+		manual_parsing := 0
+		tmpBuffer := 
 		GuiControl,, EditorBoxOK, Zatwierdź
 		enable("EditorBoxCancel")
 		enable("EditorBoxOK")
@@ -2089,11 +2115,13 @@ manual_imports:
 	{
 		;GuiControl,, EditorBoxOK, % ">>  Parsuj   "
 		;parsed := 0
-		mconfirm := 1
-		GoSub, read_import_links
-		mconfirm := 
-
 		Gui, 1:Default
+		
+		manual_confirming := 1
+		GoSub, read_import_links
+		manual_confirming := 0
+
+		;Gui, 1:Default
 		GoSub, manual_cloud_check
 		;GoSub, ahk_update
 		
@@ -2628,8 +2656,6 @@ Return
 manual_cloud_check:
   debug("manual_cloud_check", A_LineNumber)
 
-  debug("CloudBtnED04_R ::::: " CloudBtnED04_R)
-  debug("CloudBtnED04_sR ::::: " CloudBtnED04_sR)
     CloudBtnED04_L := CloudBtnED04_R
     CloudBtnED04_sL := CloudBtnED04_sR
 	CloudBtnED04_I :=
@@ -2644,7 +2670,7 @@ manual_cloud_check:
         ;GuiControl, Show, Red_CloudBtnED04
 		CloudBtnED04_I := badEntry("CloudBtnED04", checkScriptsExist(CloudBtnED04_R))			
     }
-	else
+	;else
 
     enableGroup("Imports_") 
     change(04, changes, CloudBtnED04_D != CloudBtnED04_R)
@@ -3676,11 +3702,11 @@ GUI_visibility(element, action) {
 	{
 		if (action = "enable" && element = "Imports_")
 		{
-		  StringRight, editable, control, 4
+		  StringRight, editable, controll, 4
 
 		  if RegExMatch(editable, "ED\d{2}")
 		  {
-			GuiControlGet, ischecked ,, % regexReplace(control, "ED", "SW")
+			GuiControlGet, ischecked ,, % regexReplace(controll, "ED", "SW")
 			if (!ischecked) ; || (editable = "ED06" && !isapiactive))  ;tu jeżeli wyłączać booktabs razem z api
 			{
 				;if (editable = "ED05")
@@ -3689,8 +3715,9 @@ GUI_visibility(element, action) {
 			}
 			
 		  }
-		  else if RegExMatch(editable, "SW05") ;api-start.ahk obowiązkowy
+		  else if (editable = "SW05") ;RegExMatch(editable, "SW05") ;api-start.ahk obowiązkowy
 				continue
+
 		  ;else if (RegExMatch(editable, "SW06") && !isapiactive)
 			;	continue
 		}
