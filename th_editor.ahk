@@ -955,15 +955,18 @@ register_script:
 
 	;if (RESTART)
 	;{
+		GoSub, off_messages
 		;debug("[>go import links")
 		GoSub, read_import_links
 		;debug("[>should go init cloud folder")
-		if (!PPRO8_PATTERN)
-			GoSub, init_cloud_folder   ;tutaj qsync link, nie w reset
+;msgbox, stage2
+;		if (!PPRO8_PATTERN)
+;			GoSub, init_cloud_folder   ;tutaj qsync link, nie w reset ;wyjebac, update przez restart
 		;debug("[>go read defaults")
 		GoSub, read_defaults
 		;debug("[>go reset changes")
 		GoSub, reset_changes
+		GoSub, on_messages   ;NA KONIEC GDY NIE MA CLOUD FOLDER SPRAWDZIC CZY JEST W REJESTRZE I SPYTAC CZY UPDATE (UAKTYWNIC RESET)
 		RESTART := 0
 	;}
 	
@@ -1016,7 +1019,6 @@ register_script:
 	return
 	
 load_script:
-
 	GuiControl, Enable, eTRADER_ED01
 	;badEntry("eTRADER_ED01", !bitGet(warnings, 1))
 	eTRADER_ED01_I := badEntry("eTRADER_ED01", RegExMatch(TRADER, eTRADER_ED01_pattern))
@@ -1025,6 +1027,11 @@ load_script:
 
 	;enableAll()
 	;CREATE_NEW := 0
+
+	GoSub, update_cloud_folder  ;;init???
+	;enableGroup("Imports_") 
+	;GoSub, ahk_update
+
 	
 	;RegWrite, REG_SZ, HKEY_CURRENT_USER, Software\TraderHouse\script, Path, %full_path%
 
@@ -1338,7 +1345,7 @@ grab_check:
 Return
 
 data_check:
-  if (resetting /*|| editing*/)  ;;;editing new --- potrzebne przy klikaniu w inny edit bez potwierdzenia zmian (konflikt editable)
+  if (resetting || RESTART /*|| editing*/)  ;;;editing new --- potrzebne przy klikaniu w inny edit bez potwierdzenia zmian (konflikt editable)
     return
   debug(">data_check", A_LineNumber)
   ;GoSub, debug_init
@@ -1486,7 +1493,7 @@ errcheck:
 
 stop_errcheck:
   debug(">stop_errcheck", A_LineNumber)
-  if (resetting)
+  if (resetting || RESTART)
     return
   ;debug("stop_errcheck", A_LineNumber)
   confirmed := 0
@@ -1544,7 +1551,7 @@ return
 #If
 
 edit_proceed:
-  if (resetting)
+  if (resetting || RESTART)
     return
 	;%ctrl1%_val := %ctrl1%  ;; to _val w koncu czy _L ?????
 	;debug("edit_proceed", A_LineNumber)
@@ -1595,7 +1602,7 @@ edit_proceed:
 Return
 
 edit_canceled:
-    if (resetting)
+    if (resetting || RESTART)
       return
     debug("edit_canceled >>> " ctrl1, A_LineNumber)
     ;%ctrl1%_val := %ctrl1%_R
@@ -1691,15 +1698,31 @@ update_cloud_folder:
  *	<przywracanie folderu przez reset>
 */
   GuiControl, Hide, Yellow_CloudBtnED04
+	anyScriptExist := InStr(FileExist(CloudBtnED04_L), "D") && checkScriptsExist(CloudBtnED04_L)
+	isAnyFullLink := checkImportFullLinks()
 
-	if (!InStr(FileExist(CloudBtnED04_L), "D")) {   ;NEW ??
+	;	if (CloudBtnED04_L != CloudBtnED04_D)  ;;w init_cloud_folder bylo _R !=
+	;	{
+	;		CloudBtnED04_I := badEntry("CloudBtnED04", 0) ;czerwona ramka
+		;}
+		;else if (isAnyFullLink)
+		if (anyScriptExist)
+		{
+			CloudBtnED04_I := badEntry("CloudBtnED04", 1)	
+		}
+		else
+		{
+			CloudBtnED04_I := badEntry("CloudBtnED04", 0)
+			
+			if (isAnyFullLink)
+				GuiControl, Show, Yellow_CloudBtnED04
+			else
+				return
+		}
+		enableGroup("Imports_")
+		GoSub, ahk_update
 
-		if (CloudBtnED04_L != CloudBtnED04_D)
-			CloudBtnED04_I := badEntry("CloudBtnED04", 0) ;czerwona ramka
-		else if (checkImportFullLinks())  ;jezeli jest jakis pelny link
-			GuiControl, Show, Yellow_CloudBtnED04
-	}
- 
+	
 Return
 
 
@@ -1786,7 +1809,7 @@ manual_input:
 				
 		if (!fext)  ;; sprawdz czy import nie jest domyslnym katalogiem
 		{
-			fdir  := dirSlash(importedLink)
+			fdir  := addSlash(importedLink)
 			
 			noext[A_Index] := 1  ;;zaznacza czy import pod danym indexem jest ścieżką do katalogu
 			;if (checkScriptsExist(fdir)) 
@@ -1903,8 +1926,14 @@ manual_confirm:
 	if (defaultDir)
 	{
 		if (!manual_parsing) {
-			CloudBtnED04_R := defaultDir
-			CloudBtnED04_sR := buttonPath(defaultDir)
+			CloudBtnED04_L := remSlash(defaultDir)
+			CloudBtnED04_sL := buttonPath(remSlash(defaultDir))
+			if (RESTART)
+			{
+				CloudBtnED04_R := CloudBtnED04_L
+				CloudBtnED04_sR := CloudBtnED04_sL
+			}
+			
 		}
 		if (!manual_confirming)
 		{
@@ -1915,13 +1944,19 @@ manual_confirm:
 	}
 	else if (badDirIdx) ;&& !manual_confirming)
 	{
-		tmpDir := dirSlash(importz[badDirIdx])
 		if (!manual_parsing && !commented[badDirIdx]) {
-			CloudBtnED04_R := tmpDir
-			CloudBtnED04_sR := buttonPath(tmpDir)
+			tmpDir := remSlash(importz[badDirIdx])
+			CloudBtnED04_L := tmpDir
+			CloudBtnED04_sL := buttonPath(tmpDir)
+			if (RESTART)
+			{
+				CloudBtnED04_R := CloudBtnED04_L
+				CloudBtnED04_sR := CloudBtnED04_sL			
+			}
 		}
 		if (!manual_confirming)
 		{
+			tmpDir := addSlash(importz[badDirIdx])
 			if (checkScriptsExist(tmpDir))
 				commented[badDirIdx] := 0
 			tmpImportz.Push((commented[badDirIdx] ? ";" : "") "#Include " tmpDir)
@@ -1947,14 +1982,24 @@ manual_confirm:
 					if (!manual_confirming)
 						importz[positions[A_Index]] := cutted
 					if (!manual_parsing) {
-						%ictrl%_R := cutted
-						%ictrl%_sR := cutted
+						%ictrl%_L := cutted
+						%ictrl%_sL := cutted
+						if (RESTART)
+						{
+							%ictrl%_R := %ictrl%_L
+							%ictrl%_sR := %ictrl%_sL
+						}
 					}
 				}
 				else
 				{
-					%ictrl%_R := pushPath
-					%ictrl%_sR := buttonPath(pushPath)			
+					%ictrl%_L := pushPath
+					%ictrl%_sL := buttonPath(pushPath)
+					if (RESTART)
+					{
+						%ictrl%_R := %ictrl%_L
+						%ictrl%_sR := %ictrl%_sL					
+					}
 				}
 
 				if (A_Index > 1)  ;api-start.ahk pomijamy
@@ -1964,9 +2009,11 @@ manual_confirm:
 					;chkbox := CHK_IMPORTS[A_Index]
 					;btnc := %chkbox%_R
 					;debug("checkbox::" btnc "  checked ? " !commented[positions[A_Index]], A_LineNumber)
-					%chkbox%_R := !commented[positions[A_Index]]	
-					debug("switching ::: " chkbox " to " %chkbox%_R, A_LineNumber)
-					GuiControl, , %chkbox%, % %chkbox%_R
+					%chkbox%_L := !commented[positions[A_Index]]	
+					if (RESTART)
+						%chkbox%_R := %chkbox%_L
+					else
+						GuiControl, , %chkbox%, % %chkbox%_L
 				}
 			}
 			else if (A_Index > 1)
@@ -1976,9 +2023,11 @@ manual_confirm:
 				;chkbox := CHK_IMPORTS[A_Index]
 				;btnc := %chkbox%_R
 				;debug("checkbox::" btnc "  checked ? " !commented[positions[A_Index]], A_LineNumber)
-				%chkbox%_R := !commented[positions[A_Index]]	
-				debug("switching off ::: " chkbox, A_LineNumber)
-				GuiControl, , %chkbox%, 0
+				%chkbox%_L := !commented[positions[A_Index]]	
+				if (RESTART)
+					%chkbox%_R := %chkbox%_L
+				else
+					GuiControl, , %chkbox%, 0
 			
 				; GuiControlGet, enabled, Enabled, %ctrl%
 				; StringRight, ctrlnr, ctrl, 2
@@ -2381,19 +2430,7 @@ init_cloud_folder:
     }
 	if (!Q_PATH) {
 		RegWrite, REG_SZ, HKEY_CURRENT_USER, Software\TraderHouse\script, Qsync, 
-		isAnyFullLink := checkImportFullLinks()
-
-		if (CloudBtnED04_R != CloudBtnED04_D)
-			CloudBtnED04_I := badEntry("CloudBtnED04", 0) ;czerwona ramka
-		else if (isAnyFullLink)
-			GuiControl, Show, Yellow_CloudBtnED04
-
-		if (isAnyFullLink)
-		{
-			enableGroup("Imports_")
-			;CloudBtnED04_I := badEntry("CloudBtnED04", 1)				
-			GoSub, ahk_update
-		}
+		GoSub, update_cloud_folder
 		return
 	}
   }
@@ -2412,10 +2449,10 @@ init_cloud_folder:
   } 
 */
 	
-  S_PATH := buttonPath(Q_PATH)  ;StrLen(Q_PATH) > 32 ? shortenPath(Q_PATH, 29) : Q_PATH
+  Q_PATH := remSlash(Q_PATH)  ;StrLen(Q_PATH) > 32 ? shortenPath(Q_PATH, 29) : Q_PATH
   
   CloudBtnED04_R := Q_PATH
-  CloudBtnED04_sR := S_PATH
+  CloudBtnED04_sR := buttonPath(Q_PATH)
   
   GoSub, ahk_founded
 Return
@@ -2511,7 +2548,7 @@ relink_cloud_folder:
 		{
 			CloudBtnED04_L :=     ;gdy jest val, bierz z val, inaczej wartosc prosto z controlki
 			CloudBtnED04_sL :=
-			GuiControl, Text, CloudBtnED04, %CloudBtnED04_D%
+			GuiControl, Text, CloudBtnED04, % addSlash(CloudBtnED04_D)
 			GuiControl, Show, Yellow_CloudBtnED04
 			enableGroup("Imports_")
 			change(04, changes, 1) ;; chyba pominac wykrycie zmiany
@@ -2524,24 +2561,24 @@ relink_cloud_folder:
   }
   
   GuiControl, Hide, Yellow_CloudBtnED04
-  Q_PATH := Folder
-  S_PATH := buttonPath(Q_PATH)  ;StrLen(Q_PATH) > 32 ? shortenPath(Q_PATH, 29) : Q_PATH
+  Q_PATH := remSlash(Folder)
+  S_PATH := buttonPath(remSlash(Q_PATH))  ;StrLen(Q_PATH) > 32 ? shortenPath(Q_PATH, 29) : Q_PATH
       
 ahk_founded:
   debug(">ahk_founded", A_LineNumber)
   ; Check if the last character of the folder name is a backslash, which happens for root
   ; directories such as C:\. If it is, remove it to prevent a double-backslash later on.
-  StringRight, LastChar, Q_PATH, 1
-  if (LastChar = "\")
-	StringTrimRight, Q_PATH, Q_PATH, 1  ; Remove the trailing backslash.
+;  StringRight, LastChar, Q_PATH, 1
+;  if (LastChar = "\")
+;	StringTrimRight, Q_PATH, Q_PATH, 1  ; Remove the trailing backslash.
 	
   RegWrite, REG_SZ, HKEY_CURRENT_USER, Software\TraderHouse\script, Qsync, %Q_PATH%
-  enableGroup("Imports_") 
+  ;enableGroup("Imports_") 
 
   CloudBtnED04_L := Q_PATH 
   CloudBtnED04_sL := S_PATH
 
-  GuiControl, Text, CloudBtnED04, %S_PATH%
+  GuiControl, Text, CloudBtnED04, % addSlash(S_PATH)
 
   change(04, changes, Q_PATH != CloudBtnED04_R)
   ;debug(04 " ::::::::::::::::: " (Q_PATH != CloudBtnED04_R), A_LineNumber)
@@ -2563,7 +2600,7 @@ ahk_update:
   updating := 1
   
   ;; SPRAWDŹ CZY ISTNIEJĄ JAKIEŚ PEŁNE ŚCIEŻKI
-	;;--> JEŻELI TAK, ODBLOKUJ, JEŻELI CLOUD PATH == _D -> ŻÓŁTA RAMKA
+	;;--> JEŻELI TAK, ODBLOKUJ, JEŻELI CLOUD PATH == _D -> ŻÓŁTA RAMKA (na imporcie)
 	;;--> DLA PEŁNYCH ŚCIEŻEK BADENTRY PATHEXIST, CHECK UPDATE I IKONY
 	;;--> DLA DOMYŚLNYCH BADENTRY SCRIPTEXIST
 
@@ -2656,24 +2693,27 @@ Return
 manual_cloud_check:
   debug("manual_cloud_check", A_LineNumber)
 
-    CloudBtnED04_L := CloudBtnED04_R
-    CloudBtnED04_sL := CloudBtnED04_sR
 	CloudBtnED04_I :=
-    GuiControl, Text, CloudBtnED04, %CloudBtnED04_sR%
+    GuiControl, Text, CloudBtnED04, % addSlash(CloudBtnED04_sL)
+	debug("[[[[[[[ CloudBtnED04 <-- " addSlash(CloudBtnED04_D) "]]]]]]]", A_LineNumber)
 		
-	if (CloudBtnED04_R = CloudBtnED04_D)
+	if (CloudBtnED04_L = CloudBtnED04_D)
 	{
 		GuiControl, Show, Yellow_CloudBtnED04
 	}
-    else if !checkScriptsExist(CloudBtnED04_R)
+	else if (InStr(FileExist(CloudBtnED04_L), "D") && checkScriptsExist(CloudBtnED04_L))
+	{
+		RegWrite, REG_SZ, HKEY_CURRENT_USER, Software\TraderHouse\script, Qsync, %CloudBtnED04_L%	
+		CloudBtnED04_I := badEntry("CloudBtnED04", 1)
+	}
+    else
     {
         ;GuiControl, Show, Red_CloudBtnED04
-		CloudBtnED04_I := badEntry("CloudBtnED04", checkScriptsExist(CloudBtnED04_R))			
+		CloudBtnED04_I := badEntry("CloudBtnED04", 0)			
     }
-	;else
-
+	
     enableGroup("Imports_") 
-    change(04, changes, CloudBtnED04_D != CloudBtnED04_R)
+    change(04, changes, CloudBtnED04_D != CloudBtnED04_L)
 
     GoSub, ahk_update
 Return
@@ -2898,7 +2938,7 @@ checkScriptsExist(dir)
 	global DIR_SCRIPTS
 	For script in DIR_SCRIPTS ; Loop, %PPRO%  ;_, 
 	{
-	   if FileExist(dir "\" script)
+	   if FileExist(addSlash(dir) script)
 		  return 1
 	}
 	return 0
@@ -2989,10 +3029,18 @@ parsePath(InputVar)
 	return Trim(RegExReplace(InputVar, "(\\{2,})", "\"))
 }
 
-dirSlash(InputVar)
+addSlash(InputVar)
 {
 	StringRight, LastChar, InputVar, 1
 	return InputVar . (LastChar != "\" ? "\" : "")
+}
+
+remSlash(InputVar)
+{
+	StringRight, LastChar, InputVar, 1
+	if (LastChar = "\")
+		StringTrimRight, InputVar, InputVar, 1  ; Remove the trailing backslash.
+	return InputVar
 }
 	
 askCloudUpdate()
@@ -3260,7 +3308,11 @@ if RESTART || answer
 			}
 			
 			if (control = "CloudBtnED04")
-				GoSub, update_cloud_folder			
+			{
+				reset_val := addSlash(reset_val)
+				if (!RESTART)
+					GoSub, update_cloud_folder
+			}
 		  }
 		  else
 		  {
@@ -3328,7 +3380,7 @@ if RESTART || answer
   }
   if importssw
   {
-	if (CurrentTab = 2)
+	if (importsEnabled())
 		GoSub, ahk_update
 	else if (CurrentTab = 4)
 		GoSub, ahk_checkbooks
@@ -3357,14 +3409,18 @@ Return
 
 TAB::
   Send {TAB}
-  if (CurrentTab = 2) && (deprecated <> 0x0)
-    GUI_visibility("YellowI_", "MoveDraw")
+  if (importsEnabled()) && (deprecated <> 0x0)
+  {
+		GUI_visibility("YellowI_", "MoveDraw")
+  }
 Return
 
 +TAB::
   Send +{TAB}
-  if (CurrentTab = 2) && (deprecated <> 0x0)
-    GUI_visibility("YellowI_", "MoveDraw")  
+  if (importsEnabled()) && (deprecated <> 0x0)
+  {
+		GUI_visibility("YellowI_", "MoveDraw")  
+  }
 Return
 #If
 
@@ -4180,7 +4236,7 @@ focuscheck:
 			break
 	}
   Sleep, 50
-  if (CurrentTab = 2) && (deprecated <> 0x0)
+  if (importsEnabled()) && (deprecated <> 0x0)
   {
 		GUI_visibility("YellowI_", "MoveDraw")  
   }
@@ -4240,8 +4296,10 @@ WM_MOUSEMOVE(btn, lparam, msgx) {  ;0x200 mousemove 0x201 lbuttondown 0x204 rbut
 			;Gui, 7:Hide
 	;}
   
-    if (CurrentTab = 2) && (deprecated <> 0x0)   ;; check import scripts up to date warrning
-      GUI_visibility("YellowI_", "MoveDraw")  
+    if (importsEnabled()) && (deprecated <> 0x0)   ;; check import scripts up to date warrning
+    {
+        GUI_visibility("YellowI_", "MoveDraw")  
+	}
 
     if ctrl {
       if InStr(">" . ctrl, ">Imports_") {
@@ -4370,7 +4428,7 @@ WM_ACTIVATE(lparam)
 }
 
 activation_check:
-	if (CurrentTab = 2)
+	if (importsEnabled())
 		GoSub, ahk_update
 	else
 		GoSub, ahk_checkbooks
@@ -4380,6 +4438,17 @@ reenalbe_tabs:
 	enable("CurrentTab")
 Return
 
+importsEnabled()
+{
+	global CurrentTab
+	if (CurrentTab = 2)
+	{
+		GuiControlGet, enabled, Enabled, Imports_group
+		return enabled
+	}
+	else
+		return 0
+}
 
 WM_FOCUS()  ;;po restarcie nie przechodzi do data_check <--- ale WM_FOCUS nie jest winien
 { 

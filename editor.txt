@@ -2,9 +2,17 @@
 [zmienilem globalny matching mode z 2 na 3]
 [zmienilem ,A na ,ahk_id %hWin%]
 [1926 !minput dobrze?]
+[pododawalem dirSlash do wszystkich CloudBtnED04 i usunalem "\"]
 
-
+1031 update czy init cloud folder?? moze polaczyc  [[[[[ sprawdzic update_cloud_folder ]]]]]
+3307 update_cloud_folder:  <-- gdzie wykorzystac? po resecie? czemu tylko czy istnieja full linki a nie spr czy istnieja skrypty
+importy uaktywnic po recznym zawsze, przy init tylko jezeli cloud nie default lub istnieja full links
+addslash z restart
+podwojne nadpisywanie w GuiControl, Text, CloudBtnED04 przy wlaczaniu
 po recznej zmianie checkboxy nie odpalaj¹ buttonow
+
+parsing validlinks przy wlacznaiu --> R inaczej --> L i umozliwic reset
+przy tworzeniu skryptu (otwieraniu) jest heurystyka znajdowania cloud --> podmienic w recznych i danych ze skryptu?
 
 cloud button bez backslash(?) -- lepiej Z
 
