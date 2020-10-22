@@ -960,6 +960,8 @@ register_script:
 		GoSub, read_import_links
 		;debug("[>should go init cloud folder")
 ;msgbox, stage2
+		GoSub, get_pattern_file
+
 ;		if (!PPRO8_PATTERN)
 ;			GoSub, init_cloud_folder   ;tutaj qsync link, nie w reset ;wyjebac, update przez restart
 		;debug("[>go read defaults")
@@ -1028,7 +1030,7 @@ load_script:
 	;enableAll()
 	;CREATE_NEW := 0
 
-	GoSub, update_cloud_folder  ;;init???
+	GoSub, update_imports  ;;init???
 	;enableGroup("Imports_") 
 	;GoSub, ahk_update
 
@@ -1689,15 +1691,12 @@ Return
 export_pass:
 Return
 
-update_cloud_folder:
+update_imports:
   debug("updating_cloud_folder", A_LineNumber)
-  ;debug("CloudBtnED04_L = " CloudBtnED04_L)
-  ;debug("CloudBtnED04_R = " CloudBtnED04_R)
-  ;debug("CloudBtnED04_D = " CloudBtnED04_D)
 /*
- *	<przywracanie folderu przez reset>
+ *	<update qsync link i imports check>
 */
-  GuiControl, Hide, Yellow_CloudBtnED04
+	GuiControl, Hide, Yellow_CloudBtnED04
 	anyScriptExist := InStr(FileExist(CloudBtnED04_L), "D") && checkScriptsExist(CloudBtnED04_L)
 	isAnyFullLink := checkImportFullLinks()
 
@@ -1706,18 +1705,57 @@ update_cloud_folder:
 	;		CloudBtnED04_I := badEntry("CloudBtnED04", 0) ;czerwona ramka
 		;}
 		;else if (isAnyFullLink)
+		if (!RESTART)
+		{
+			GuiControl, Text, CloudBtnED04, % CloudBtnED04_sL ? addSlash(CloudBtnED04_sL) : CloudBtnED04_L ? addSlash(CloudBtnED04_L) : CloudBtnED04_D
+			lastValue := CloudBtnED04_L ? CloudBtnED04_L : CloudBtnED04_D
+			change(04, changes, lastValue != CloudBtnED04_R)
+				
+			Loop % DIR_SCRIPTS.Count()    ;;sortujemy wymagane skrypty
+			{
+				ictrl := BTN_IMPORTS[A_Index]
+				GuiControl, Text, %ictrl%, % %ictrl%_sL ? %ictrl%_sL : %ictrl%_L ? %ictrl%_L : %ictrl%_D
+				
+				StringRight, ctrlno, ictrl, 2
+				lastValue := %ictrl%_L ? %ictrl%_L : %ictrl%_D
+				change(ctrlno, changes, lastValue != %ictrl%_R)
+			}
+		}
+		
 		if (anyScriptExist)
 		{
 			CloudBtnED04_I := badEntry("CloudBtnED04", 1)	
+			RegWrite, REG_SZ, HKEY_CURRENT_USER, Software\TraderHouse\script, Qsync, %CloudBtnED04_L%
+			
 		}
 		else
 		{
-			CloudBtnED04_I := badEntry("CloudBtnED04", 0)
-			
 			if (isAnyFullLink)
+			{
+				CloudBtnED04_I := badEntry("CloudBtnED04", 1)	
 				GuiControl, Show, Yellow_CloudBtnED04
+			}
 			else
+			{
+				if (CloudBtnED04_L && CloudBtnED04_D != CloudBtnED04_L)
+					CloudBtnED04_I := badEntry("CloudBtnED04", 0)
+				else
+				{
+					CloudBtnED04_I := badEntry("CloudBtnED04", 1)
+					GuiControl, Show, Yellow_CloudBtnED04
+				}
+					
+				For _, ctrl in BTN_IMPORTS
+				{
+					hide(ctrl "_BTNUpdate")
+					%ctrl%_I := badEntry(ctrl, 1)
+					GuiControl, Hide, YellowB_%ctrl%
+					GuiControl, Hide, YellowI_%ctrl%	
+					bitUnset(deprecated, ctrlnr - 4)
+				}
+				disableGroup("Imports_")
 				return
+			}
 		}
 		enableGroup("Imports_")
 		GoSub, ahk_update
@@ -1741,19 +1779,25 @@ read_import_links:
 	}
 
 	
-	CloudBtnED04_R := CloudBtnED04_D   ;;0
+	CloudBtnED04_L := ;CloudBtnED04_D   ;;0
+	CloudBtnED04_sL :=
 			
-	Imports_apiED05_R := Imports_apiED05_D  ;;importy
-	Imports_bookED06_R := Imports_bookED06_D
-	Imports_chartED07_R := Imports_chartED07_D
-	Imports_symED08_R := Imports_symED08_D
+	Imports_apiED05_sL :=
+	Imports_bookED06_sL :=
+	Imports_chartED07_sL :=
+	Imports_symED08_sL :=
+
+	Imports_apiED05_L := ;Imports_apiED05_D  ;;importy
+	Imports_bookED06_L := ;Imports_bookED06_D
+	Imports_chartED07_L := ;Imports_chartED07_D
+	Imports_symED08_L := ;Imports_symED08_D
 	
-	Imports_apiSW05_R := Imports_apiSW05_D  ;;switche
-	Imports_bookSW06_R := Imports_bookSW06_D
-	Imports_chartSW07_R := Imports_chartSW07_D
-	Imports_symSW08_R := Imports_symSW08_D  
+	Imports_apiSW05_L := ;Imports_apiSW05_D  ;;switche
+	Imports_bookSW06_L := ;Imports_bookSW06_D
+	Imports_chartSW07_L := ;Imports_chartSW07_D
+	Imports_symSW08_L := ;Imports_symSW08_D  
 	
-	
+
 	if (manual_confirming) {
 		GoSub, manual_confirm
 		return
@@ -1984,6 +2028,8 @@ manual_confirm:
 					if (!manual_parsing) {
 						%ictrl%_L := cutted
 						%ictrl%_sL := cutted
+						;debug(%ictrl%_L " ::<----:: " cutted)
+					
 						if (RESTART)
 						{
 							%ictrl%_R := %ictrl%_L
@@ -1995,6 +2041,8 @@ manual_confirm:
 				{
 					%ictrl%_L := pushPath
 					%ictrl%_sL := buttonPath(pushPath)
+					;debug(%ictrl%_L " ::<----:: " pushPath)	
+				
 					if (RESTART)
 					{
 						%ictrl%_R := %ictrl%_L
@@ -2169,11 +2217,10 @@ manual_imports:
 		manual_confirming := 1
 		GoSub, read_import_links
 		manual_confirming := 0
-
 		;Gui, 1:Default
-		GoSub, manual_cloud_check
-		;GoSub, ahk_update
 		
+		GoSub, update_imports
+		;GoSub, ahk_update
 		;enableGroup("Imports_")
 		parseStuff := changedStuff
 		GoSub, GuiEditorOK
@@ -2234,6 +2281,13 @@ editor_change:
 		GuiControl,, EditorBoxOK, Zatwierdź
 		parsed := 1
 	}
+return
+
+get_pattern_file:
+	if (FileExist(PPRO8_PATTERN := CloudBtnED04_L "\PPRO8 Trader.ahk") || FileExist(PPRO8_PATTERN := CloudBtnED04_L "\PPRO8.ahk"))
+		debug(">szablon PPRO8  :::  " ripPath(PPRO8_PATTERN), A_LineNumber)
+	else
+		debug(">szablon PPRO8  :::  brak", A_LineNumber)
 return
 
 read_defaults:
@@ -2430,7 +2484,7 @@ init_cloud_folder:
     }
 	if (!Q_PATH) {
 		RegWrite, REG_SZ, HKEY_CURRENT_USER, Software\TraderHouse\script, Qsync, 
-		GoSub, update_cloud_folder
+		GoSub, update_imports
 		return
 	}
   }
@@ -2548,6 +2602,7 @@ relink_cloud_folder:
 		{
 			CloudBtnED04_L :=     ;gdy jest val, bierz z val, inaczej wartosc prosto z controlki
 			CloudBtnED04_sL :=
+			/*
 			GuiControl, Text, CloudBtnED04, % addSlash(CloudBtnED04_D)
 			GuiControl, Show, Yellow_CloudBtnED04
 			enableGroup("Imports_")
@@ -2555,6 +2610,8 @@ relink_cloud_folder:
 			CloudBtnED04_I := badEntry("CloudBtnED04", CloudBtnED04_D != CloudBtnED04_R)			
 			
 			GoSub, ahk_update
+			*/
+			GoSub, update_imports
 			return
 		}
 	}
@@ -2573,20 +2630,17 @@ ahk_founded:
 ;	StringTrimRight, Q_PATH, Q_PATH, 1  ; Remove the trailing backslash.
 	
   RegWrite, REG_SZ, HKEY_CURRENT_USER, Software\TraderHouse\script, Qsync, %Q_PATH%
-  ;enableGroup("Imports_") 
 
   CloudBtnED04_L := Q_PATH 
   CloudBtnED04_sL := S_PATH
 
   GuiControl, Text, CloudBtnED04, % addSlash(S_PATH)
-
   change(04, changes, Q_PATH != CloudBtnED04_R)
-  ;debug(04 " ::::::::::::::::: " (Q_PATH != CloudBtnED04_R), A_LineNumber)
+  
   CloudBtnED04_I := badEntry("CloudBtnED04", 1) 
+  enableGroup("Imports_") 
  ; ```````````````````````````````````````````````````````````````````````````````````````
   
-  if (RESTART) && (FileExist(PPRO8_PATTERN := CloudBtnED04_L "\PPRO8 Trader.ahk") || FileExist(PPRO8_PATTERN := CloudBtnED04_L "\PPRO8.ahk"))
-	debug(">szablon PPRO8  :::  " ripPath(PPRO8_PATTERN), A_LineNumber)
 ;  GoSub, import_defaults   WYJEBAC TO DO RESETING
   
   ;sprawdzic kazdy import osobno -najpierw import z ahk - pozniej w qpath (luzem i /skrypty /ramdisk_api /api) , umozliwic wybor przez fileselect
@@ -2688,36 +2742,6 @@ ahk_update:
   
   updating := 0
 Return
-
-
-manual_cloud_check:
-  debug("manual_cloud_check", A_LineNumber)
-
-	CloudBtnED04_I :=
-    GuiControl, Text, CloudBtnED04, % addSlash(CloudBtnED04_sL)
-	debug("[[[[[[[ CloudBtnED04 <-- " addSlash(CloudBtnED04_D) "]]]]]]]", A_LineNumber)
-		
-	if (CloudBtnED04_L = CloudBtnED04_D)
-	{
-		GuiControl, Show, Yellow_CloudBtnED04
-	}
-	else if (InStr(FileExist(CloudBtnED04_L), "D") && checkScriptsExist(CloudBtnED04_L))
-	{
-		RegWrite, REG_SZ, HKEY_CURRENT_USER, Software\TraderHouse\script, Qsync, %CloudBtnED04_L%	
-		CloudBtnED04_I := badEntry("CloudBtnED04", 1)
-	}
-    else
-    {
-        ;GuiControl, Show, Red_CloudBtnED04
-		CloudBtnED04_I := badEntry("CloudBtnED04", 0)			
-    }
-	
-    enableGroup("Imports_") 
-    change(04, changes, CloudBtnED04_D != CloudBtnED04_L)
-
-    GoSub, ahk_update
-Return
-
 
 
 relink_import:
@@ -2949,7 +2973,8 @@ checkImportFullLinks()
 	global BTN_IMPORTS
 	For each, link in BTN_IMPORTS ; Loop, %PPRO%
 	{
-	   if (%link%_R != %link%_D)
+	   lVal := %link%_L ;? %link%_L : %link%_R
+	   if (lVal && lVal != %link%_D)
 		  return 1
 	}
 	return 0
@@ -3297,7 +3322,6 @@ if RESTART || answer
 			if (control = "CloudBtnED04" && CloudBtnED04_R = CloudBtnED04_D)
 			{
 				%control%_sL := %control%_sR :=
-				reset_val := CloudBtnED04_D
 			}
 			else
 			{
@@ -3310,8 +3334,7 @@ if RESTART || answer
 			if (control = "CloudBtnED04")
 			{
 				reset_val := addSlash(reset_val)
-				if (!RESTART)
-					GoSub, update_cloud_folder
+				importssw := 1
 			}
 		  }
 		  else
@@ -3345,10 +3368,13 @@ if RESTART || answer
 				%control%_I := badEntry(control, RegExMatch(reset_val, %control%_pattern), ctrlno) ;tu reset_val, bo inaczej %control% trzeba odswiezyc po zmianie
  		    }
 			if (control = "CloudBtnED04") {
+				importssw := 1
+			/*
 			  if (reset_val = %control%_D) { ; AND NO VALID IMPORTS  ;;-------------i zadnego linku
 				GuiControl, Hide, Yellow_CloudBtnED04
 				disableGroup("Imports_")
 			  }
+			*/
 			}
 		  }
 		  else if RegExMatch(control, "[A-Za-z_]{3,}SW\d{2}")
@@ -3380,8 +3406,10 @@ if RESTART || answer
   }
   if importssw
   {
-	if (importsEnabled())
-		GoSub, ahk_update
+	if (!RESTART)
+		GoSub, update_imports
+	;if (importsEnabled())
+	;	GoSub, ahk_update
 	else if (CurrentTab = 4)
 		GoSub, ahk_checkbooks
   }
