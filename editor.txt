@@ -4,6 +4,25 @@
 [1926 !minput dobrze?]
 [pododawalem dirSlash do wszystkich CloudBtnED04 i usunalem "\"]
 
+
+przy recznie zczytywac nowe <--- zawsze moga byc wczesniej ustawione buttonami
+defaultDir = cloudfolder
+dla skryptow
+	jezeli enable 
+		jezeli na pozycji i commented
+			uncomment
+		else
+			putAtIndex
+	else
+		jezeli na pozycji i uncommented
+			comment
+
+
+gdy byl off i jest on --> jezeli byl commented to uncommenting, jezeli nie bylo, to dodac na pozycje 
+
+przy anuluj przywroc poprzednie
+autohotkey folder w parsing przywracaj jak sie da
+cutting links nie zaskakuje w parsing
 ponowne zatwierdzenie tez wykrzacza
 po resecie i ponownym recznym sie wykrzacza
 1031 update czy init cloud folder?? moze polaczyc  [[[[[ sprawdzic update_cloud_folder ]]]]]

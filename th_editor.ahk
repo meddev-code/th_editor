@@ -1030,7 +1030,7 @@ load_script:
 	;enableAll()
 	;CREATE_NEW := 0
 
-	GoSub, update_imports  ;;init???
+	GoSub, update_import_buttons  ;;init???
 	;enableGroup("Imports_") 
 	;GoSub, ahk_update
 
@@ -1691,8 +1691,8 @@ Return
 export_pass:
 Return
 
-update_imports:
-  debug("updating_cloud_folder", A_LineNumber)
+update_import_buttons:
+  debug(">update_import_buttons", A_LineNumber)
 /*
  *	<update qsync link i imports check>
 */
@@ -1730,13 +1730,13 @@ update_imports:
 		}
 		else
 		{
-			if (isAnyFullLink)
-			{
-				CloudBtnED04_I := badEntry("CloudBtnED04", 1)	
-				GuiControl, Show, Yellow_CloudBtnED04
-			}
-			else
-			{
+			;if (isAnyFullLink)
+			;{
+			;	CloudBtnED04_I := badEntry("CloudBtnED04", 1)	
+			;	GuiControl, Show, Yellow_CloudBtnED04
+			;}
+			;else
+			;{
 				if (CloudBtnED04_L && CloudBtnED04_D != CloudBtnED04_L)
 					CloudBtnED04_I := badEntry("CloudBtnED04", 0)
 				else
@@ -1753,9 +1753,10 @@ update_imports:
 					GuiControl, Hide, YellowI_%ctrl%	
 					bitUnset(deprecated, ctrlnr - 4)
 				}
-				disableGroup("Imports_")
+				if (!isAnyFullLink)
+					disableGroup("Imports_")
 				return
-			}
+			;}
 		}
 		enableGroup("Imports_")
 		GoSub, ahk_update
@@ -1776,8 +1777,11 @@ read_import_links:
 	if (manual_parsing) {
 		GoSub, manual_input
 		return
-	}
-
+	} else if (manual_confirming) {
+		if (importz)
+			GoSub, manual_confirm
+		return
+	}	
 	
 	CloudBtnED04_L := ;CloudBtnED04_D   ;;0
 	CloudBtnED04_sL :=
@@ -1798,11 +1802,6 @@ read_import_links:
 	Imports_symSW08_L := ;Imports_symSW08_D  
 	
 
-	if (manual_confirming) {
-		GoSub, manual_confirm
-		return
-	}	
-	
 	;CHK_IMPORTS := ["Imports_bookSW06_R", "Imports_chartSW07_R", "Imports_symSW08_R"] ;;switche
 	
 	;ciekawe: skrypt daje sam z siebie priorytet na odkomentowane, tak jak mialoby byc
@@ -2011,12 +2010,13 @@ manual_confirm:
 	Loop % DIR_SCRIPTS.Count()    ;;sortujemy wymagane skrypty
 	{
 	  ;idx := A_Index + 1
-		if (!manual_parsing)
-		{
+		;if (!manual_parsing)
+		;{
 			ictrl := BTN_IMPORTS[A_Index]
 			
 			if (positions[A_Index])
 			{
+
 				pushPath := importz[positions[A_Index]]
 				cutted := StrSplit(expectedAHKs,";")[A_Index+1]
 
@@ -2024,7 +2024,10 @@ manual_confirm:
 				{
 					;; obcinamy full link, jezeli jest w domyślnej ścieżce
 					if (!manual_confirming)
+					{
+						debug(importz[positions[A_Index]] " <<<<<<< " cutted, A_LineNumber)
 						importz[positions[A_Index]] := cutted
+					}
 					if (!manual_parsing) {
 						%ictrl%_L := cutted
 						%ictrl%_sL := cutted
@@ -2037,7 +2040,7 @@ manual_confirm:
 						}
 					}
 				}
-				else
+				else if (!manual_parsing)
 				{
 					%ictrl%_L := pushPath
 					%ictrl%_sL := buttonPath(pushPath)
@@ -2050,7 +2053,7 @@ manual_confirm:
 					}
 				}
 
-				if (A_Index > 1)  ;api-start.ahk pomijamy
+				if (!manual_parsing && A_Index > 1)  ;api-start.ahk pomijamy
 				{
 					chkbox := regexReplace(ictrl, "ED", "SW")
 
@@ -2064,7 +2067,7 @@ manual_confirm:
 						GuiControl, , %chkbox%, % %chkbox%_L
 				}
 			}
-			else if (A_Index > 1)
+			else if (!manual_parsing && A_Index > 1)
 			{
 				chkbox := regexReplace(ictrl, "ED", "SW")
 
@@ -2082,7 +2085,7 @@ manual_confirm:
 
 				; GuiControlGet, ischecked ,, % regexReplace(ctrl, "ED", "SW")
 			}
-		}
+		;}
 		if (!manual_confirming && positions[A_Index])
 		{
 			tmpImportz.Push((commented[positions[A_Index]] ? ";" : "") "#Include " importz[positions[A_Index]])
@@ -2116,8 +2119,8 @@ manual_confirm:
 			otherLink := tmpLink
 
 	    tmpImportz.Push((commented[A_Index] ? ";" : "") "#Include " otherLink)
-		;debug((commented[A_Index] ? "[" : " ") "#Include " otherLink (commented[A_Index] ? "]  commented" : ""))
-		debug("[> pushing other: " otherLink (commented[A_Index] ? " (commented)" : ""))
+		debug((commented[A_Index] ? "[" : " ") "#Include " otherLink (commented[A_Index] ? "]  commented" : ""))
+		;debug("[> pushing other: " otherLink (commented[A_Index] ? " (commented)" : ""))
 	}
 
 	;if (manual_parsing)
@@ -2177,8 +2180,8 @@ manual_imports:
 		w_edit := EBOX_W - 20
 		Gui, EditorBox: +Owner1
 		Gui, EditorBox: add, Text, r1 w200, edytuj wpisy ręcznie:
-		parseStuff := listArray(validImportz)
-		Gui, EditorBox: add, Edit, -E0x200 -Wrap r10 w%w_edit% vEditorBox geditor_change, % parseStuff ;% Default
+		;parseStuff := listArray(validImportz)
+		Gui, EditorBox: add, Edit, -E0x200 -Wrap r10 w%w_edit% vEditorBox geditor_change, ;% parseStuff ;% Default
         Gui, EditorBox: add, Button, w90 x%x_btn% y+15 vEditorBoxCancel gEditorBoxCancel, Anuluj  ;&Cancel
         Gui, EditorBox: add, Button, w90 x+10 vEditorBoxOK gEditorBoxOK , Zatwierdź  ;, % ">>  Parsuj   " ;&OK
         EditorGuiCreated := true
@@ -2186,6 +2189,8 @@ manual_imports:
 	}
 	
 	Gui, 1: +Disabled
+	Gui, EditorBox:Default
+	GuiControl, , EditorBox, % parseStuff := listArray(validImportz)
 	Gui, EditorBox: Show,  x%x_ebox% y%y_ebox% w%EBOX_W% h%EBOX_H%,% APPNAME ":  #include list"
 	Send ^{Home}
 	return
@@ -2219,10 +2224,11 @@ manual_imports:
 		manual_confirming := 0
 		;Gui, 1:Default
 		
-		GoSub, update_imports
+		GoSub, update_import_buttons
 		;GoSub, ahk_update
 		;enableGroup("Imports_")
-		parseStuff := changedStuff
+		if (changedStuff)
+			parseStuff := changedStuff
 		GoSub, GuiEditorOK
 	}
 
@@ -2232,6 +2238,7 @@ GuiEditorOK:
 	EditorBoxGuiClose:
     EditorBoxGuiEscape:
     EditorBoxCancel:
+	Gui, 1:Default
 	Gui, 1: -Disabled
 	GoSub, on_messages
     Gui, EditorBox: Cancel
@@ -2484,7 +2491,7 @@ init_cloud_folder:
     }
 	if (!Q_PATH) {
 		RegWrite, REG_SZ, HKEY_CURRENT_USER, Software\TraderHouse\script, Qsync, 
-		GoSub, update_imports
+		GoSub, update_import_buttons
 		return
 	}
   }
@@ -2611,7 +2618,7 @@ relink_cloud_folder:
 			
 			GoSub, ahk_update
 			*/
-			GoSub, update_imports
+			GoSub, update_import_buttons
 			return
 		}
 	}
@@ -3407,7 +3414,7 @@ if RESTART || answer
   if importssw
   {
 	if (!RESTART)
-		GoSub, update_imports
+		GoSub, update_import_buttons
 	;if (importsEnabled())
 	;	GoSub, ahk_update
 	else if (CurrentTab = 4)
